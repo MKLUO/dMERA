@@ -1,7 +1,11 @@
 #include <vector>
 #include <utility>
+#include <iostream>
 
-#include "dMERA.h"
+using std::cout;
+using std::endl;
+
+#include "Dmera.h"
 
 enum class Dmera::Tensor::Type
 {
@@ -71,10 +75,13 @@ Dmera::Dmera(std::vector<double> js, double delta)
 			if (nodes[i]->j() > nodes[idx]->j())
 				idx = i;
 
-		Sdrg_Node* const node_1 = nodes[((idx - 1) < 0)? (idx + nodes.size()): idx];
+		for (int i = 0; i < nodes.size(); ++i) cout << nodes[i]->j() << " ";
+		cout << endl << idx << " " << nodes.size() << endl;
+
+		Sdrg_Node* const node_1 = nodes[((idx - 1) < 0)? (idx + nodes.size() - 1): (idx - 1)];
 		Sdrg_Node* const node_2 = nodes[idx];
-		Sdrg_Node* const node_3 = nodes[((idx + 1) >= nodes.size())? (idx - nodes.size()): idx];
-		Sdrg_Node* const node_4 = nodes[((idx + 2) >= nodes.size())? (idx - nodes.size()): idx];
+		Sdrg_Node* const node_3 = nodes[((idx + 1) >= nodes.size())? (idx - nodes.size() + 1): (idx + 1)];
+		Sdrg_Node* const node_4 = nodes[((idx + 2) >= nodes.size())? (idx - nodes.size() + 2): (idx + 2)];
 
 		//construct new tensors and bonds
 
@@ -103,12 +110,20 @@ Dmera::Dmera(std::vector<double> js, double delta)
 		node_1->set_bond(bd_u1);
 		node_4->set_bond(bd_u4);
 
-		node_1->set_j(effective_j(node_2->j(), node_1->j(), node_3->j(), delta));
+		node_1->set_j(Dmera::effective_j(node_2->j(), node_1->j(), node_3->j(), delta));
 
 		delete node_2;
 		delete node_3;
 
-		nodes.erase(nodes.begin() + idx, (idx + 1 == nodes.size())? nodes.begin(): (nodes.begin() + idx + 1));
+		if (idx == nodes.size() - 1)
+		{
+			nodes.erase(nodes.begin());
+			nodes.erase(nodes.end() - 1);			
+		} 
+		else 
+		{
+			nodes.erase(nodes.begin() + idx, nodes.begin() + idx + 2);
+		}
 	}
 
 	Tensor* t_s = Append_Tensor(nodes[0]->bond(), nodes[1]->bond());
@@ -136,7 +151,7 @@ std::pair<Dmera::Bond*, Dmera::Bond*> Dmera::Append_Bonds(Tensor* t)
 	return std::pair<Bond*, Bond*>(b1, b2);
 }
 
-static double effective_j(double j, double j_l, double j_r, double delta)
+double Dmera::effective_j(double j, double j_l, double j_r, double delta)
 {
 	return j_l * j_r / j / (1. + delta);
 }
