@@ -1,6 +1,7 @@
 #include <vector>
 #include <utility>
 #include <iostream>
+#include <sstream>
 
 using std::cout;
 using std::endl;
@@ -20,6 +21,18 @@ Dmera::Tensor::Tensor(Bond* b1, Bond* b2): in1(b1), in2(b2)
 	type = Type::Unitary;
 	out1 = 0;
 	out2 = 0;
+
+	int depth1, depth2;
+
+	if (b1->get_in() == 0)
+		depth1 = 0;
+	else depth1 = b1->get_in()->get_depth() + 1;
+
+	if (b2->get_in() == 0)
+		depth2 = 0;
+	else depth2 = b2->get_in()->get_depth() + 1;
+
+	depth = (depth1 > depth2)? depth1: depth2;
 }
 
 void Dmera::Tensor::set_out(Bond* b1, Bond* b2)
@@ -32,6 +45,16 @@ bool Dmera::Tensor::open() const
 {
 	return ((in1 == 0) || (in2 == 0) || (out1 == 0) || (out2 == 0));
 }
+
+Dmera::Bond* Dmera::Tensor::get_in1() const { return in1; }
+
+Dmera::Bond* Dmera::Tensor::get_in2() const { return in2; }
+
+Dmera::Bond* Dmera::Tensor::get_out1() const { return out1; }
+
+Dmera::Bond* Dmera::Tensor::get_out2() const { return out2; }
+
+int Dmera::Tensor::get_depth() const { return depth; } 
 
 Dmera::Bond::Bond(Tensor* t): in(t)
 {
@@ -47,6 +70,10 @@ bool Dmera::Bond::open() const
 {
 	return ((in == 0) || (out == 0));
 }
+
+Dmera::Tensor* Dmera::Bond::get_in() const { return in; }
+
+Dmera::Tensor* Dmera::Bond::get_out() const { return out; }
 
 Dmera::Sdrg_Node::Sdrg_Node(double j_, int idx_, Bond* b): _j(j_), _idx(idx_), _bond(b) {}
 
@@ -64,7 +91,12 @@ Dmera::Dmera(std::vector<double> js, double delta)
 
 	std::vector<Sdrg_Node*> nodes;
 	for (double j : js)
-		nodes.push_back(new Sdrg_Node(j, nodes.size(), new Bond(0)));
+	{
+		Bond* b = new Bond(0);
+		nodes.push_back(new Sdrg_Node(j, nodes.size(), b));
+		//bonds.push_back(b);
+		in_bonds.push_back(b);
+	}
 
 	//iteratively contract nodes
 
@@ -128,6 +160,10 @@ Dmera::Dmera(std::vector<double> js, double delta)
 
 	Tensor* t_s = Append_Tensor(nodes[0]->bond(), nodes[1]->bond());
 	t_s->set_type(Tensor::Type::Singlet);
+
+
+    //Tensors and bonds created.
+
 }
 
 Dmera::Tensor* Dmera::Append_Tensor(Bond* b1, Bond* b2)
@@ -154,4 +190,33 @@ std::pair<Dmera::Bond*, Dmera::Bond*> Dmera::Append_Bonds(Tensor* t)
 double Dmera::effective_j(double j, double j_l, double j_r, double delta)
 {
 	return j_l * j_r / j / (1. + delta);
+}
+
+std::string Dmera::Tensor::get_type() const
+{
+	switch (type)
+	{
+		case (Type::Unitary): return "Unitary";
+		case (Type::Singlet): return "Singlet";
+	}
+}
+
+std::string Dmera::Tensor::summary() const
+{
+	std::stringstream ss;
+
+	ss << get_type() << " " << get_depth() << endl;
+
+	return ss.str();
+}
+
+std::string Dmera::summary() const
+{
+	std::stringstream ss;
+	for (Tensor* tensor : tensors)
+	{
+		ss << tensor->summary();
+	}
+
+	return ss.str();
 }

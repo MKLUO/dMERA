@@ -1,6 +1,7 @@
 #ifndef DMERA_H
 #define DMERA_H
 
+#include <string>
 #include <vector>
 #include <utility>
 
@@ -8,6 +9,8 @@ class Dmera
 {
 	public:
 		Dmera(std::vector<double>, double);
+
+		std::string summary() const;
 
 	private:
 		class Tensor;
@@ -23,8 +26,19 @@ class Dmera
 				void set_out(Bond*, Bond*);
 				bool open() const;
 
+				Bond* get_in1() const;
+				Bond* get_in2() const;
+				Bond* get_out1() const;
+				Bond* get_out2() const;
+
+				int get_depth() const;
+
+				std::string get_type() const;
+				std::string summary() const;
+
 			private:
 				Type type;
+				int depth;
 				Bond* in1;
 				Bond* in2;
 				Bond* out1;
@@ -37,6 +51,9 @@ class Dmera
 				Bond(Tensor*);
 				void set_out(Tensor*);
 				bool open() const;
+
+				Tensor* get_in() const;
+				Tensor* get_out() const;
 
 			private:
 				Tensor* in;
@@ -67,6 +84,7 @@ class Dmera
 
 		std::vector<Tensor*>	tensors;
 		std::vector<Bond*>		bonds;
+		std::vector<Bond*>		in_bonds;
 };
 
 #endif //ifndef DMERA_H
