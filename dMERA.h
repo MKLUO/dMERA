@@ -12,13 +12,14 @@ class Dmera
 	private:
 		class Tensor;
 		class Bond;
-		class Srdg_Node;
+		class Sdrg_Node;
 
 		class Tensor
 		{
 			public:
 				Tensor(Bond*, Bond*);
 				enum class Type;
+				void set_type(Type);
 				void set_out(Bond*, Bond*);
 				bool open() const;
 
@@ -30,7 +31,7 @@ class Dmera
 				Bond* out2;
 		};
 
-		class Bond;
+		class Bond
 		{
 			public:
 				Bond(Tensor*);
@@ -47,15 +48,16 @@ class Dmera
 			public:
 				Sdrg_Node(double, int, Bond*);
 				double j() const;
+				int idx() const;
 				Bond* bond() const;
 
 				void set_j(double);
 				void set_bond(Bond*);
 
 			private:
-				double j;
-				const int idx;
-				Bond* bond;
+				double _j;
+				const int _idx;
+				Bond* _bond;
 		};
 
 		Tensor* Append_Tensor(Bond*, Bond*);

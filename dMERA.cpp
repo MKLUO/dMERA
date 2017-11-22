@@ -1,17 +1,21 @@
 #include <vector>
 #include <utility>
 
-Dmera::Tensor::Tensor(Bond* b1, Bond* b2): in1(b1), in2(b2)
-{
-	type = Type::Unitary;
-	out1 = 0;
-	out2 = 0;
-}
+#include "dMERA.h"
 
 enum class Dmera::Tensor::Type
 {
 	Unitary,
 	Singlet
+};
+
+void Dmera::Tensor::set_type(Dmera::Tensor::Type type_) { type = type_; }
+
+Dmera::Tensor::Tensor(Bond* b1, Bond* b2): in1(b1), in2(b2)
+{
+	type = Type::Unitary;
+	out1 = 0;
+	out2 = 0;
 }
 
 void Dmera::Tensor::set_out(Bond* b1, Bond* b2)
@@ -40,23 +44,23 @@ bool Dmera::Bond::open() const
 	return ((in == 0) || (out == 0));
 }
 
-Dmera::Sdrg_Node::Sdrg_Node(double j_, int idx_, Bond* b): j(j_), idx(idx_), bond(b) {}
+Dmera::Sdrg_Node::Sdrg_Node(double j_, int idx_, Bond* b): _j(j_), _idx(idx_), _bond(b) {}
 
-double Dmera::Sdrg_Node::j() const { return j; }
+double Dmera::Sdrg_Node::j() const { return _j; }
 
-Bond* Dmera::Sdrg_Node::bond() const { return bond; }
+Dmera::Bond* Dmera::Sdrg_Node::bond() const { return _bond; }
 
-void Dmera::Sdrg_Node::set_j(double j_) { j = j_; }
+void Dmera::Sdrg_Node::set_j(double j_) { _j = j_; }
 
-void Dmera::Sdrg_Node::set_bond(Bond* b) { bond = b; }
+void Dmera::Sdrg_Node::set_bond(Bond* b) { _bond = b; }
 
 Dmera::Dmera(std::vector<double> js, double delta)
 {
 	//build original sdrg-list
 
-	std::vector<Srdg_Node*> nodes;
+	std::vector<Sdrg_Node*> nodes;
 	for (double j : js)
-		nodes.push_back(new Srdg_Node(j, nodes.size(), new Bond(0)));
+		nodes.push_back(new Sdrg_Node(j, nodes.size(), new Bond(0)));
 
 	//iteratively contract nodes
 
@@ -64,7 +68,7 @@ Dmera::Dmera(std::vector<double> js, double delta)
 	{
 		int idx = 0;
 		for (int i = 0; i < nodes.size(); ++i)
-			if (nodes[i]->j() > node[idx]->j())
+			if (nodes[i]->j() > nodes[idx]->j())
 				idx = i;
 
 		Sdrg_Node* const node_1 = nodes[((idx - 1) < 0)? (idx + nodes.size()): idx];
@@ -76,20 +80,20 @@ Dmera::Dmera(std::vector<double> js, double delta)
 
 		Tensor* t_d		= Append_Tensor(node_2->bond(), node_3->bond());
 
-		std::pair<Bond*, Bond*> bonds = Append_Bonds(t_d);
-		Bond* bd_d1		= bonds.first;
-		Bond* bd_d2		= bonds.second;
+		std::pair<Bond*, Bond*> bond_d = Append_Bonds(t_d);
+		Bond* bd_d1		= bond_d.first;
+		Bond* bd_d2		= bond_d.second;
 
 		Tensor* t_u1	= Append_Tensor(node_1->bond(), bd_d1);
 		Tensor* t_u2	= Append_Tensor(bd_d2, node_4->bond());
 
-		std::pair<Bond*, Bond*> bonds = Append_Bonds(t_u1);
-		Bond* bd_u1		= bonds.first;
-		Bond* bd_u2		= bonds.second;
+		std::pair<Bond*, Bond*> bond_u1 = Append_Bonds(t_u1);
+		Bond* bd_u1		= bond_u1.first;
+		Bond* bd_u2		= bond_u1.second;
 
-		std::pair<Bond*, Bond*> bonds = Append_Bonds(t_u2);
-		Bond* bd_u3		= bonds.first;
-		Bond* bd_u4		= bonds.second;
+		std::pair<Bond*, Bond*> bond_u2 = Append_Bonds(t_u2);
+		Bond* bd_u3		= bond_u2.first;
+		Bond* bd_u4		= bond_u2.second;
 
 		Tensor* t_s		= Append_Tensor(bd_u2, bd_u3);
 		t_s->set_type(Tensor::Type::Singlet);
@@ -111,7 +115,7 @@ Dmera::Dmera(std::vector<double> js, double delta)
 	t_s->set_type(Tensor::Type::Singlet);
 }
 
-Tensor* Dmera::Append_Tensor(Bond* b1, Bond* b2)
+Dmera::Tensor* Dmera::Append_Tensor(Bond* b1, Bond* b2)
 {
 	Tensor* t = new Tensor(b1, b2);
 	b1->set_out(t);
@@ -121,7 +125,7 @@ Tensor* Dmera::Append_Tensor(Bond* b1, Bond* b2)
 	return t;
 }
 
-std::pair<Bond*, Bond*> Dmera::Append_Bonds(Tensor* t)
+std::pair<Dmera::Bond*, Dmera::Bond*> Dmera::Append_Bonds(Tensor* t)
 {
 	Bond* b1 = new Bond(t);
 	Bond* b2 = new Bond(t);
