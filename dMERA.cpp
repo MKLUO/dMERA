@@ -1,3 +1,5 @@
+#include <vector>
+#include <utility>
 
 Dmera::Tensor::Tensor(Bond* b1, Bond* b2): in1(b1), in2(b2)
 {
@@ -38,9 +40,23 @@ bool Dmera::Bond::open() const
 	return ((in == 0) || (out == 0));
 }
 
-Dmera::Dmera(Phys_Cond phys_cond)
+Dmera::Sdrg_Node::Sdrg_Node(double j_, int idx_, Bond* b): j(j_), idx(idx_), bond(b) {}
+
+double Dmera::Sdrg_Node::j() const { return j; }
+
+Bond* Dmera::Sdrg_Node::bond() const { return bond; }
+
+void Dmera::Sdrg_Node::set_j(double j_) { j = j_; }
+
+void Dmera::Sdrg_Node::set_bond(Bond* b) { bond = b; }
+
+Dmera::Dmera(std::vector<double> js, double delta)
 {
 	//build original sdrg-list
+
+	std::vector<Srdg_Node*> nodes;
+	for (double j : js)
+		nodes.push_back(new Srdg_Node(j, nodes.size(), new Bond(0)));
 
 	//iteratively contract nodes
 
@@ -50,22 +66,22 @@ Dmera::Dmera(Phys_Cond phys_cond)
 		for (int i = 0; i < nodes.size(); ++i)
 			if (nodes[i]->j() > node[idx]->j())
 				idx = i;
-		
-        Sdrg_Node* const node_1 = nodes[((idx - 1) < 0)? (idx + nodes.size()): idx];
-        Sdrg_Node* const node_2 = nodes[idx];
-        Sdrg_Node* const node_3 = nodes[((idx + 1) >= nodes.size())? (idx - nodes.size()): idx];
-        Sdrg_Node* const node_4 = nodes[((idx + 2) >= nodes.size())? (idx - nodes.size()): idx];
-                     
+
+		Sdrg_Node* const node_1 = nodes[((idx - 1) < 0)? (idx + nodes.size()): idx];
+		Sdrg_Node* const node_2 = nodes[idx];
+		Sdrg_Node* const node_3 = nodes[((idx + 1) >= nodes.size())? (idx - nodes.size()): idx];
+		Sdrg_Node* const node_4 = nodes[((idx + 2) >= nodes.size())? (idx - nodes.size()): idx];
+
 		//construct new tensors and bonds
 
 		Tensor* t_d		= Append_Tensor(node_2->bond(), node_3->bond());
 
-        std::pair<Bond*, Bond*> bonds = Append_Bonds(t_d);
+		std::pair<Bond*, Bond*> bonds = Append_Bonds(t_d);
 		Bond* bd_d1		= bonds.first;
-        Bond* bd_d2		= bonds.second;
+		Bond* bd_d2		= bonds.second;
 
-        Tensor* t_u1	= Append_Tensor(node_1->bond(), bd_d1);
-        Tensor* t_u2	= Append_Tensor(bd_d2, node_4->bond());
+		Tensor* t_u1	= Append_Tensor(node_1->bond(), bd_d1);
+		Tensor* t_u2	= Append_Tensor(bd_d2, node_4->bond());
 
 		std::pair<Bond*, Bond*> bonds = Append_Bonds(t_u1);
 		Bond* bd_u1		= bonds.first;
@@ -83,11 +99,8 @@ Dmera::Dmera(Phys_Cond phys_cond)
 		node_1->set_bond(bd_u1);
 		node_4->set_bond(bd_u4);
 
-		node_1->set_next(node_4);
-		node_4->set_prev(node_1);
+		node_1->set_j(effective_j(node_2->j(), node_1->j(), node_3->j(), delta));
 
-		node_1->set_j(node_2->j(), node_1->j(), node_3->j());
-	
 		delete node_2;
 		delete node_3;
 
@@ -97,7 +110,7 @@ Dmera::Dmera(Phys_Cond phys_cond)
 	Tensor* t_s = Append_Tensor(nodes[0]->bond(), nodes[1]->bond());
 	t_s->set_type(Tensor::Type::Singlet);
 }
-                                 
+
 Tensor* Dmera::Append_Tensor(Bond* b1, Bond* b2)
 {
 	Tensor* t = new Tensor(b1, b2);
@@ -117,4 +130,9 @@ std::pair<Bond*, Bond*> Dmera::Append_Bonds(Tensor* t)
 	bonds.push_back(b1);
 	bonds.push_back(b2);
 	return std::pair<Bond*, Bond*>(b1, b2);
+}
+
+static double effective_j(double j, double j_l, double j_r, double delta)
+{
+	return j_l * j_r / j / (1. + delta);
 }
