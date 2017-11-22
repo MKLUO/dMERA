@@ -1,6 +1,6 @@
 #include <vector>
 #include <utility>
-//#include <iostream>
+#include <iomanip>
 #include <sstream>
 
 #include "Dmera.h"
@@ -265,11 +265,12 @@ std::string Dmera::summary() const
 	}
 
 	for (int i = 0; i < width; ++i)
-		ss << " " << i << " ";
+		ss << std::setw(3) << i;
 	ss << std::endl;
 
 	for (auto row : diagram)
 	{
+		ss << " ";
 		for (int pixel : row)
 
 			switch (pixel)
