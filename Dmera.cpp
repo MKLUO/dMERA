@@ -1,10 +1,7 @@
 #include <vector>
 #include <utility>
-#include <iostream>
+//#include <iostream>
 #include <sstream>
-
-using std::cout;
-using std::endl;
 
 #include "Dmera.h"
 
@@ -16,7 +13,7 @@ enum class Dmera::Tensor::Type
 
 void Dmera::Tensor::set_type(Dmera::Tensor::Type type_) { type = type_; }
 
-Dmera::Tensor::Tensor(Bond* b1, Bond* b2): in1(b1), in2(b2)
+Dmera::Tensor::Tensor(Bond* b1, Bond* b2): in1(b1), in2(b2), _idx1(b1->get_idx()), _idx2(b2->get_idx())
 {
 	type = Type::Unitary;
 	out1 = 0;
@@ -43,7 +40,11 @@ void Dmera::Tensor::set_out(Bond* b1, Bond* b2)
 
 bool Dmera::Tensor::open() const
 {
-	return ((in1 == 0) || (in2 == 0) || (out1 == 0) || (out2 == 0));
+	switch (type)
+	{
+		case (Type::Unitary): return ((in1 == 0) || (in2 == 0) || (out1 == 0) || (out2 == 0));
+		case (Type::Singlet): return ((in1 == 0) || (in2 == 0));
+	}
 }
 
 Dmera::Bond* Dmera::Tensor::get_in1() const { return in1; }
@@ -56,7 +57,11 @@ Dmera::Bond* Dmera::Tensor::get_out2() const { return out2; }
 
 int Dmera::Tensor::get_depth() const { return depth; } 
 
-Dmera::Bond::Bond(Tensor* t): in(t)
+int Dmera::Tensor::get_idx1() const { return _idx1; }
+
+int Dmera::Tensor::get_idx2() const { return _idx2; }
+
+Dmera::Bond::Bond(Tensor* t, int idx): in(t), _idx(idx)
 {
 	out = 0;
 }
@@ -75,6 +80,8 @@ Dmera::Tensor* Dmera::Bond::get_in() const { return in; }
 
 Dmera::Tensor* Dmera::Bond::get_out() const { return out; }
 
+int Dmera::Bond::get_idx() const { return _idx; }
+
 Dmera::Sdrg_Node::Sdrg_Node(double j_, int idx_, Bond* b): _j(j_), _idx(idx_), _bond(b) {}
 
 double Dmera::Sdrg_Node::j() const { return _j; }
@@ -85,14 +92,15 @@ void Dmera::Sdrg_Node::set_j(double j_) { _j = j_; }
 
 void Dmera::Sdrg_Node::set_bond(Bond* b) { _bond = b; }
 
-Dmera::Dmera(std::vector<double> js, double delta)
+Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 {
 	//build original sdrg-list
 
+	int idx = 0;
 	std::vector<Sdrg_Node*> nodes;
 	for (double j : js)
 	{
-		Bond* b = new Bond(0);
+		Bond* b = new Bond(0, idx++);
 		nodes.push_back(new Sdrg_Node(j, nodes.size(), b));
 		//bonds.push_back(b);
 		in_bonds.push_back(b);
@@ -107,8 +115,8 @@ Dmera::Dmera(std::vector<double> js, double delta)
 			if (nodes[i]->j() > nodes[idx]->j())
 				idx = i;
 
-		for (int i = 0; i < nodes.size(); ++i) cout << nodes[i]->j() << " ";
-		cout << endl << idx << " " << nodes.size() << endl;
+		//		for (int i = 0; i < nodes.size(); ++i) cout << nodes[i]->j() << " ";
+		//		cout << endl << idx << " " << nodes.size() << endl;
 
 		Sdrg_Node* const node_1 = nodes[((idx - 1) < 0)? (idx + nodes.size() - 1): (idx - 1)];
 		Sdrg_Node* const node_2 = nodes[idx];
@@ -162,7 +170,7 @@ Dmera::Dmera(std::vector<double> js, double delta)
 	t_s->set_type(Tensor::Type::Singlet);
 
 
-    //Tensors and bonds created.
+	//Tensors and bonds created.
 
 }
 
@@ -178,8 +186,8 @@ Dmera::Tensor* Dmera::Append_Tensor(Bond* b1, Bond* b2)
 
 std::pair<Dmera::Bond*, Dmera::Bond*> Dmera::Append_Bonds(Tensor* t)
 {
-	Bond* b1 = new Bond(t);
-	Bond* b2 = new Bond(t);
+	Bond* b1 = new Bond(t, t->get_idx1());
+	Bond* b2 = new Bond(t, t->get_idx2());
 	t->set_out(b1, b2);
 
 	bonds.push_back(b1);
@@ -205,7 +213,7 @@ std::string Dmera::Tensor::summary() const
 {
 	std::stringstream ss;
 
-	ss << get_type() << " " << get_depth() << endl;
+	ss << "Type: " << get_type() << " | Depth: " << get_depth() << " | " << get_idx1() << " ~ " << get_idx2() << std::endl;
 
 	return ss.str();
 }
@@ -213,10 +221,65 @@ std::string Dmera::Tensor::summary() const
 std::string Dmera::summary() const
 {
 	std::stringstream ss;
+
+	ss << "System Width: " << width << std::endl;
+
+	//Tensor summary
+
 	for (Tensor* tensor : tensors)
 	{
 		ss << tensor->summary();
 	}
+                   
+	ss << std::endl;
 
+	//Diagram
+
+	std::vector<std::vector<int>> diagram;
+                 
+	for (Tensor* tensor : tensors)
+	{
+		int d = tensor->get_depth();
+		if (d + 1 > diagram.size())
+			diagram.resize(d + 1);
+
+		int x1 = tensor->get_idx1();
+		int x2 = tensor->get_idx2();
+
+		diagram[d].resize(width);
+
+		diagram[d][x1] = 1;
+		diagram[d][x2] = 3;
+		if (x2 > x1)
+		{
+			for (int i = x1 + 1; i < x2; ++i)
+				diagram[d][i] = 2;
+		} 
+		else
+		{
+			for (int i = x1 + 1; i < width; ++i)
+				diagram[d][i] = 2;
+			for (int i = 0; i < x2; ++i)
+				diagram[d][i] = 2;
+		}    	
+	}
+
+	for (int i = 0; i < width; ++i)
+		ss << " " << i << " ";
+	ss << std::endl;
+
+	for (auto row : diagram)
+	{
+		for (int pixel : row)
+
+			switch (pixel)
+			{
+				case (1):	ss << " ╘═"; break;
+				case (2):	ss << "═══"; break;
+				case (3):	ss << "═╛ "; break;
+				default:	ss << "   "; break;
+			}
+		ss << std::endl;
+	}              
 	return ss.str();
 }

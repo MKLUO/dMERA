@@ -33,6 +33,9 @@ class Dmera
 
 				int get_depth() const;
 
+				int get_idx1() const;
+				int get_idx2() const;
+
 				std::string get_type() const;
 				std::string summary() const;
 
@@ -43,21 +46,27 @@ class Dmera
 				Bond* in2;
 				Bond* out1;
 				Bond* out2;
+
+				const int _idx1, _idx2;
 		};
 
 		class Bond
 		{
 			public:
-				Bond(Tensor*);
+				Bond(Tensor*, int);
 				void set_out(Tensor*);
 				bool open() const;
 
 				Tensor* get_in() const;
 				Tensor* get_out() const;
 
+				int get_idx() const;
+
 			private:
 				Tensor* in;
 				Tensor* out;
+
+				const int _idx;
 		};
 
 		class Sdrg_Node
@@ -81,6 +90,8 @@ class Dmera
 		std::pair<Bond*, Bond*> Append_Bonds(Tensor*);
 
 		static double effective_j(double, double, double, double);
+
+		const int width;
 
 		std::vector<Tensor*>	tensors;
 		std::vector<Bond*>		bonds;
