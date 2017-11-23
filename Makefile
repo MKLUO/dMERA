@@ -1,7 +1,7 @@
 CC			= g++
 CFLAGS		= -std=c++11
-LIBS		= 
-INCLUDES	= 
+LIBS		= -luni10
+INCLUDES	= -I/usr/local/uni10/include
 DBG			= -g
 SOURCES		= Dmera.cpp
 OBJECTS		= $(SOURCES:.cpp=.o)

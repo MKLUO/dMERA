@@ -2,6 +2,12 @@
 #include <utility>
 #include <iomanip>
 #include <sstream>
+#include <string>
+#include <map>
+
+#include <iostream>
+
+#include <uni10.hpp>
 
 #include "Dmera.h"
 
@@ -66,6 +72,11 @@ Dmera::Bond::Bond(Tensor* t, int idx): in(t), _idx(idx)
 	out = 0;
 }
 
+void Dmera::Bond::set_in(Tensor* t)
+{
+	in = t;
+}
+
 void Dmera::Bond::set_out(Tensor* t)
 {
 	out = t;
@@ -104,6 +115,21 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 		nodes.push_back(new Sdrg_Node(j, nodes.size(), b));
 		//bonds.push_back(b);
 		in_bonds.push_back(b);
+
+		Bond* bo = new Bond(0, -1);
+		op_bonds.push_back(bo);
+
+		Tensor* to = new Tensor(bo, 0);
+		operators.push_back(to);
+	}
+
+	for (int i = 0; i < width; ++i)
+	{
+		int r = (i == (width - 1))? 0: (i + 1);
+		operators[i]->set_out(in_bonds[i], op_bonds[r]);
+		in_bonds[i]->set_in(operators[i]);
+		op_bonds[r]->set_in(operators[i]);
+		op_bonds[r]->set_out(operators[r]);
 	}
 
 	//iteratively contract nodes
@@ -114,9 +140,6 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 		for (int i = 0; i < nodes.size(); ++i)
 			if (nodes[i]->j() > nodes[idx]->j())
 				idx = i;
-
-		//		for (int i = 0; i < nodes.size(); ++i) cout << nodes[i]->j() << " ";
-		//		cout << endl << idx << " " << nodes.size() << endl;
 
 		Sdrg_Node* const node_1 = nodes[((idx - 1) < 0)? (idx + nodes.size() - 1): (idx - 1)];
 		Sdrg_Node* const node_2 = nodes[idx];
@@ -218,7 +241,7 @@ std::string Dmera::Tensor::summary() const
 	return ss.str();
 }
 
-std::string Dmera::summary() const
+std::string Dmera::summary(bool flagonly) const
 {
 	std::stringstream ss;
 
@@ -248,19 +271,21 @@ std::string Dmera::summary() const
 
 		diagram[d].resize(width);
 
-		diagram[d][x1] = 1;
-		diagram[d][x2] = 3;
+		int offset = tensor->flaged()? 5: (flagonly? -99: 0);
+
+		diagram[d][x1] = 1 + offset;
+		diagram[d][x2] = 3 + offset;
 		if (x2 > x1)
 		{
 			for (int i = x1 + 1; i < x2; ++i)
-				diagram[d][i] = 2;
+				diagram[d][i] = 2 + offset;
 		} 
 		else
 		{
 			for (int i = x1 + 1; i < width; ++i)
-				diagram[d][i] = 2;
+				diagram[d][i] = 2 + offset;
 			for (int i = 0; i < x2; ++i)
-				diagram[d][i] = 2;
+				diagram[d][i] = 2 + offset;
 		}    	
 	}
 
@@ -275,12 +300,148 @@ std::string Dmera::summary() const
 
 			switch (pixel)
 			{
-				case (1):	ss << " ╘═"; break;
-				case (2):	ss << "═══"; break;
-				case (3):	ss << "═╛ "; break;
+				case (1):	ss << " └─"; break;
+				case (2):	ss << "───"; break;
+				case (3):	ss << "─┘ "; break;
+
+				case (6):	ss << " ╘═"; break;
+				case (7):	ss << "═══"; break;
+				case (8):	ss << "═╛ "; break;
+
 				default:	ss << "   "; break;
 			}
 		ss << std::endl;
 	}              
 	return ss.str();
 }
+
+// Flags
+
+void Dmera::Tensor::flag() { _flag = true; }
+void Dmera::Tensor::unflag() { _flag = false; }
+
+bool Dmera::Tensor::flaged() const { return _flag; }
+
+void Dmera::Tensor::flag_caus()
+{
+	_flag = true;
+
+	if (type == Type::Unitary)
+	{
+		out1->flag_caus();
+		out2->flag_caus();
+	}
+}
+
+void Dmera::Bond::flag() { _flag = true; }
+void Dmera::Bond::unflag() { _flag = false; }
+
+bool Dmera::Bond::flaged() const { return _flag; }
+
+void Dmera::Bond::flag_caus()
+{
+	_flag = true;
+
+	out->flag_caus();
+}
+
+void Dmera::reset_flags()
+{
+	for (auto t : tensors) t->unflag();
+	for (auto b : bonds ) b->unflag();
+	for (auto b : in_bonds ) b->unflag();
+}
+
+Dmera::TensorInfo::TensorInfo(Tensor* t_, std::string name_, int in1_, int in2_, int out1_, int out2_, bool trans_):
+	t(t_), name(name_), in1(in1_), in2(in2_), out1(out1_), out2(out2_), trans(trans_) {}
+
+std::string Dmera::TensorInfo::bonds()
+{
+	std::stringstream ss;
+	ss << in1 << " " << in2 << " | " << out1 << " " << out2;
+
+	return ss.str();
+}
+
+// Var-Update
+
+void Dmera::VarUpdate()
+{
+
+}
+
+
+void Dmera::VarUpdateTensor(Tensor* t0)
+{
+	reset_flags();
+
+	t0->flag();
+
+	std::vector<TensorInfo> info;
+    std::map<Bond*, int> bond_symbol_up;
+    std::map<Bond*, int> bond_symbol_down;
+
+	int bond_idx = 0;
+
+ 	const int offset = bonds.size() + in_bonds.size();
+
+	std::vector<Bond*> all_bonds = op_bonds;
+	all_bonds.insert(all_bonds.end(), in_bonds.begin(), in_bonds.end());
+	all_bonds.insert(all_bonds.end(), bonds.begin(), bonds.end());
+
+	for (Bond* b : all_bonds)
+	{        
+		bond_symbol_up[b] = ++bond_idx;
+		bond_symbol_down[b] = bond_symbol_up[b] + offset;
+	}
+
+	bond_symbol_up[t0->get_in1()]	= -1;
+	bond_symbol_up[t0->get_in2()]	= -2;
+	bond_symbol_up[t0->get_out1()]	= -3;
+	bond_symbol_up[t0->get_out2()]	= -4;
+
+	bond_symbol_up[0] = 0;
+	bond_symbol_down[0] = 0;
+
+
+	int tensor_idx = 0;
+	for (Tensor* t : tensors)
+	{
+		if (!(t->flaged()))
+		{
+			info.push_back(TensorInfo(	t, 
+										std::to_string(++tensor_idx), 
+										bond_symbol_up[t->get_in1()], 
+										bond_symbol_up[t->get_in2()], 
+										bond_symbol_up[t->get_out1()], 
+										bond_symbol_up[t->get_out2()],
+										false ));
+		}								
+
+		info.push_back(TensorInfo(	t, 
+									std::to_string(++tensor_idx), 
+									bond_symbol_down[t->get_out1()], 
+									bond_symbol_down[t->get_out2()], 
+									bond_symbol_down[t->get_in1()], 
+									bond_symbol_down[t->get_in2()],
+									true ));
+
+	}
+		
+	for (Tensor* t : operators)
+		info.push_back(TensorInfo(	t, 
+									std::to_string(++tensor_idx), 
+									bond_symbol_up[t->get_in1()], 
+									bond_symbol_down[t->get_out1()], 
+									bond_symbol_up[t->get_out1()], 
+									bond_symbol_up[t->get_out2()],
+									false ));
+
+	for (auto i : info)
+		std::cout << i.t->summary() << " Bonds: " << i.bonds() << std::endl;
+
+
+	reset_flags();
+}
+		
+

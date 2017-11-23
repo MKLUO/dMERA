@@ -14,12 +14,12 @@ int main()
 
 	std::vector<double> j;
 
-    for (int i = 0; i < 20; ++i)
+    for (int i = 0; i < 40; ++i)
 		j.push_back(jdis(re));
 
 	Dmera case1(j, 0.01);
 
-	std::cout << case1.summary() << std::endl;
+	std::cout << case1.summary(true) << std::endl;
 
 	return 0;
 }
