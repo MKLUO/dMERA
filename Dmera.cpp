@@ -367,7 +367,7 @@ std::string Dmera::TensorInfo::bonds()
 
 void Dmera::VarUpdate()
 {
-
+	VarUpdateTensor(tensors[0]);
 }
 
 
@@ -437,11 +437,14 @@ void Dmera::VarUpdateTensor(Tensor* t0)
 									bond_symbol_up[t->get_out2()],
 									false ));
 
-	for (auto i : info)
-		std::cout << i.t->summary() << " Bonds: " << i.bonds() << std::endl;
+//	for (auto i : info)
+//		std::cout << i.t->summary() << " Bonds: " << i.bonds() << std::endl;
 
 
 	reset_flags();
 }
 		
+void Dmera::check() const
+{
 
+}

@@ -21,5 +21,8 @@ int main()
 
 	std::cout << case1.summary(false) << std::endl;
 
+	case1.VarUpdate();
+//	case1.check();
+
 	return 0;
 }

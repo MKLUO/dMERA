@@ -130,6 +130,8 @@ class Dmera
 
 		void VarUpdateTensor(Tensor*);
 
+		void check() const;
+
 		std::vector<Tensor*>	tensors;
 		std::vector<Tensor*>	operators;
 		std::vector<Bond*>		bonds;
