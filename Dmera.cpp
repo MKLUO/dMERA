@@ -119,7 +119,7 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 		Bond* bo = new Bond(0, -1);
 		op_bonds.push_back(bo);
 
-		Tensor* to = new Tensor(bo, 0);
+		Tensor* to = new Tensor(bo, bo);
 		operators.push_back(to);
 	}
 
