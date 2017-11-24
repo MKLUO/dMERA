@@ -72,25 +72,13 @@ void Dmera::Tensor::putTensor(uni10::UniTensor T_) { T = T_; }
 
 uni10::UniTensor Dmera::Tensor::getTensor() const { return T; }
 
-Dmera::Bond::Bond(Tensor* t, int idx): in(t), _idx(idx)
-{
-	out = 0;
-}
+Dmera::Bond::Bond(Tensor* t, int idx): in(t), _idx(idx) { out = 0; }
 
-void Dmera::Bond::set_in(Tensor* t)
-{
-	in = t;
-}
+void Dmera::Bond::set_in(Tensor* t) { in = t; }
 
-void Dmera::Bond::set_out(Tensor* t)
-{
-	out = t;
-}
+void Dmera::Bond::set_out(Tensor* t) { out = t; }
 
-bool Dmera::Bond::open() const
-{
-	return ((in == 0) || (out == 0));
-}
+bool Dmera::Bond::open() const { return ((in == 0) || (out == 0)); }
 
 Dmera::Tensor* Dmera::Bond::get_in() const { return in; }
 
@@ -199,13 +187,16 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 
 
 	//Tensors and bonds created.
-    
+
 
 	//Create Environment Network & Info
+
+	full_env = FullEnv();
+
 	for (Tensor* t : tensors)
 		if (t->get_type() == Tensor::Type::Unitary)
 			envs[t] = TensorEnv(t);
-	
+
 	//UniTensor initialize
 	for (Tensor* t : tensors)
 		switch (t->get_type())
@@ -219,7 +210,7 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 		}
 
 	for (Tensor* t : operators)
-		t->putTensor(Dmera::Random_Unitary());
+		t->putTensor(Dmera::Identity());
 
 	svd_restore = new uni10::Network("NetworkSheets/svd_restore");
 }
@@ -245,10 +236,7 @@ std::pair<Dmera::Bond*, Dmera::Bond*> Dmera::Append_Bonds(Tensor* t)
 	return std::pair<Bond*, Bond*>(b1, b2);
 }
 
-double Dmera::effective_j(double j, double j_l, double j_r, double delta)
-{
-	return j_l * j_r / j / (1. + delta);
-}
+double Dmera::effective_j(double j, double j_l, double j_r, double delta) { return j_l * j_r / j / (1. + delta); }
 
 uni10::UniTensor Dmera::Random_Unitary()
 {
@@ -276,8 +264,8 @@ uni10::UniTensor Dmera::Random_Unitary()
 uni10::UniTensor Dmera::Singlet()
 {
 
-	uni10::Complex m[] = {	0.,		1.,
-							-1.,	0., };
+	uni10::Complex m[] = {	0.,				1. / sqrt(2.),
+							-1. / sqrt(2.),	0., };
 
 	uni10::Bond b_in(uni10::BD_IN, 2);
 
@@ -287,7 +275,51 @@ uni10::UniTensor Dmera::Singlet()
 
 	uni10::UniTensor T(uni10::CTYPE, B);
 
-    T.setRawElem(m);
+	T.setRawElem(m);
+
+	return T;
+}
+
+uni10::UniTensor Dmera::Identity()
+{
+
+	uni10::Complex m[] = {	1.,	0., 0., 0.,
+							0., 1., 0., 0.,
+							0., 0., 1., 0.,
+							0., 0., 0., 1. };
+
+	uni10::Bond b_in(uni10::BD_IN, 2);
+	uni10::Bond b_out(uni10::BD_OUT, 2);
+
+	std::vector<uni10::Bond> B;
+	B.push_back(b_in);
+	B.push_back(b_in);
+	B.push_back(b_out);
+	B.push_back(b_out);
+
+	uni10::UniTensor T(uni10::CTYPE, B);
+
+	T.setRawElem(m);
+
+	return T;
+}
+
+uni10::UniTensor Dmera::Identity2()
+{
+
+	uni10::Complex m[] = {	1.,	0.,
+							0., 1. };
+
+	uni10::Bond b_in(uni10::BD_IN, 2);
+	uni10::Bond b_out(uni10::BD_OUT, 2);
+
+	std::vector<uni10::Bond> B;
+	B.push_back(b_in);
+	B.push_back(b_out);
+
+	uni10::UniTensor T(uni10::CTYPE, B);
+
+	T.setRawElem(m);
 
 	return T;
 }
@@ -324,13 +356,13 @@ std::string Dmera::summary(bool flagonly) const
 	{
 		ss << tensor->summary();
 	}
-                   
+
 	ss << std::endl;
 
 	//Diagram
 
 	std::vector<std::vector<int>> diagram;
-                 
+
 	for (Tensor* tensor : tensors)
 	{
 		int d = tensor->get_depth();
@@ -426,7 +458,7 @@ void Dmera::reset_flags()
 Dmera::TensorInfo::TensorInfo(Tensor* t_, std::string name_, int in1_, int in2_, int out1_, int out2_, bool trans_):
 	t(t_), name(name_), in1(in1_), in2(in2_), out1(out1_), out2(out2_), trans(trans_) {}
 
-std::string Dmera::TensorInfo::bonds() const
+	std::string Dmera::TensorInfo::bonds() const
 {
 	std::stringstream ss;
 	ss << in1 << " " << in2 << " | " << out1 << " " << out2;
@@ -441,12 +473,12 @@ std::vector<Dmera::TensorInfo> Dmera::TensorEnv(Tensor* t0)
 	t0->flag();
 
 	std::vector<TensorInfo> info;
-    std::map<Bond*, int> bond_symbol_up;
-    std::map<Bond*, int> bond_symbol_down;
+	std::map<Bond*, int> bond_symbol_up;
+	std::map<Bond*, int> bond_symbol_down;
 
 	int bond_idx = 0;
 
- 	const int offset = bonds.size() + in_bonds.size();
+	const int offset = bonds.size() + in_bonds.size();
 
 	std::vector<Bond*> all_bonds = op_bonds;
 	all_bonds.insert(all_bonds.end(), in_bonds.begin(), in_bonds.end());
@@ -473,37 +505,37 @@ std::vector<Dmera::TensorInfo> Dmera::TensorEnv(Tensor* t0)
 		if (!(t->flaged()))
 		{
 			info.push_back(TensorInfo(	t, 
-										std::to_string(++tensor_idx), 
-										bond_symbol_up[t->get_in1()], 
-										bond_symbol_up[t->get_in2()], 
-										bond_symbol_up[t->get_out1()], 
-										bond_symbol_up[t->get_out2()],
-										false ));
+						std::to_string(++tensor_idx), 
+						bond_symbol_up[t->get_in1()], 
+						bond_symbol_up[t->get_in2()], 
+						bond_symbol_up[t->get_out1()], 
+						bond_symbol_up[t->get_out2()],
+						false ));
 		}								
 
 		info.push_back(TensorInfo(	t, 
-									std::to_string(++tensor_idx), 
-									bond_symbol_down[t->get_out1()], 
-									bond_symbol_down[t->get_out2()], 
-									bond_symbol_down[t->get_in1()], 
-									bond_symbol_down[t->get_in2()],
-									true ));
+					std::to_string(++tensor_idx), 
+					bond_symbol_down[t->get_out1()], 
+					bond_symbol_down[t->get_out2()], 
+					bond_symbol_down[t->get_in1()], 
+					bond_symbol_down[t->get_in2()],
+					true ));
 
 	}
-		
+
 	for (Tensor* t : operators)
 		info.push_back(TensorInfo(	t, 
-									std::to_string(++tensor_idx), 
-									bond_symbol_up[t->get_in1()], 
-									bond_symbol_down[t->get_out1()], 
-									bond_symbol_up[t->get_out1()], 
-									bond_symbol_up[t->get_out2()],
-									false ));
+					std::to_string(++tensor_idx), 
+					bond_symbol_up[t->get_in1()], 
+					bond_symbol_down[t->get_out1()], 
+					bond_symbol_up[t->get_out1()], 
+					bond_symbol_up[t->get_out2()],
+					false ));
 
-//	for (auto i : info)
-//		std::cout << i.t->summary() << " Bonds: " << i.bonds() << std::endl;
-                                                       
-  
+	//	for (auto i : info)
+	//		std::cout << i.t->summary() << " Bonds: " << i.bonds() << std::endl;
+
+
 	std::ofstream of("NetworkSheets/_temp");
 
 	for (auto i : info)
@@ -530,10 +562,90 @@ std::vector<Dmera::TensorInfo> Dmera::TensorEnv(Tensor* t0)
 
 	return info;
 }
-		
+
+std::vector<Dmera::TensorInfo> Dmera::FullEnv()
+{
+	std::vector<TensorInfo> info;
+	std::map<Bond*, int> bond_symbol_up;
+	std::map<Bond*, int> bond_symbol_down;
+
+	int bond_idx = 0;
+
+	const int offset = bonds.size() + in_bonds.size();
+
+	std::vector<Bond*> all_bonds = op_bonds;
+	all_bonds.insert(all_bonds.end(), in_bonds.begin(), in_bonds.end());
+	all_bonds.insert(all_bonds.end(), bonds.begin(), bonds.end());
+
+	for (Bond* b : all_bonds)
+	{        
+		bond_symbol_up[b] = ++bond_idx;
+		bond_symbol_down[b] = bond_symbol_up[b] + offset;
+	}
+
+	bond_symbol_up[0] = 0;
+	bond_symbol_down[0] = 0;
+
+	int tensor_idx = 0;
+	for (Tensor* t : tensors)
+	{
+		info.push_back(TensorInfo(	t, 
+					std::to_string(++tensor_idx), 
+					bond_symbol_up[t->get_in1()], 
+					bond_symbol_up[t->get_in2()], 
+					bond_symbol_up[t->get_out1()], 
+					bond_symbol_up[t->get_out2()],
+					false ));
+
+		info.push_back(TensorInfo(	t, 
+					std::to_string(++tensor_idx), 
+					bond_symbol_down[t->get_out1()], 
+					bond_symbol_down[t->get_out2()], 
+					bond_symbol_down[t->get_in1()], 
+					bond_symbol_down[t->get_in2()],
+					true ));
+
+	}
+
+	for (Tensor* t : operators)
+		info.push_back(TensorInfo(	t, 
+					std::to_string(++tensor_idx), 
+					bond_symbol_up[t->get_in1()], 
+					bond_symbol_down[t->get_out1()], 
+					bond_symbol_up[t->get_out1()], 
+					bond_symbol_up[t->get_out2()],
+					false ));
+
+	std::ofstream of("NetworkSheets/_temp_fullenv");
+
+	for (auto i : info)
+		switch (i.t->get_type())
+		{
+			case(Tensor::Type::Unitary):
+				of << i.name << ": " << i.in1 << " " << i.in2 << " ; " << i.out1 << " " << i.out2 << std::endl;
+				break;
+
+			case(Tensor::Type::Singlet):
+				if (i.in1 == 0)
+					of << i.name << ": " << " ; " << i.out1 << " " << i.out2 << std::endl;
+				else
+					of << i.name << ": " << i.in1 << " " << i.in2 << " ;" << std::endl;
+				break;
+		}
+
+	of << "TOUT: " << std::endl;
+	of.close();		
+
+	full_network = new uni10::Network("NetworkSheets/_temp_fullenv");
+
+	reset_flags();
+
+	return info;
+}
+
 // Var-Update
 
-void Dmera::VarUpdate()
+double Dmera::VarUpdate()
 {
 	for (Tensor* t : tensors)
 		if (t->get_type() == Tensor::Type::Unitary)
@@ -541,10 +653,26 @@ void Dmera::VarUpdate()
 			VarUpdateTensor(t);
 			std::cout << "|" << std::flush;
 		}
-	
-	std::cout << std::endl;
+
+	double energy = Energy();
+	std::cout << " energy: " << energy << std::endl;
+	return energy;
 }
 
+double Dmera::Energy() const
+{
+	for (auto info : full_env)
+	{
+		if (!info.trans)
+			full_network->putTensor(info.name, info.t->getTensor());
+		else
+			full_network->putTensorT(info.name, info.t->getTensor());
+	}
+
+	uni10::UniTensor energy = full_network->launch();
+
+	return energy(0).real();
+}
 void Dmera::VarUpdateTensor(Tensor* t)
 {
 	for (auto info : envs[t])
@@ -571,4 +699,100 @@ void Dmera::VarUpdateTensor(Tensor* t)
 
 void Dmera::check() const
 {
+	std::vector<TensorInfo> info;
+	std::map<Bond*, int> bond_symbol_up;
+	std::map<Bond*, int> bond_symbol_down;
+
+	int bond_idx = 0;
+
+	const int offset = bonds.size() + in_bonds.size();
+
+	std::vector<Bond*> all_bonds = op_bonds;
+	all_bonds.insert(all_bonds.end(), in_bonds.begin(), in_bonds.end());
+	all_bonds.insert(all_bonds.end(), bonds.begin(), bonds.end());
+
+	for (Bond* b : all_bonds)
+	{        
+		bond_symbol_up[b] = ++bond_idx;
+		bond_symbol_down[b] = bond_symbol_up[b] + offset;
+	}
+
+	bond_symbol_up[0] = 0;
+	bond_symbol_down[0] = 0;
+
+	int tensor_idx = 0;
+	for (Tensor* t : tensors)
+	{
+		info.push_back(TensorInfo(	t, 
+					std::to_string(++tensor_idx), 
+					bond_symbol_up[t->get_in1()], 
+					bond_symbol_up[t->get_in2()], 
+					bond_symbol_up[t->get_out1()], 
+					bond_symbol_up[t->get_out2()],
+					false ));
+
+		info.push_back(TensorInfo(	t, 
+					std::to_string(++tensor_idx), 
+					bond_symbol_down[t->get_out1()], 
+					bond_symbol_down[t->get_out2()], 
+					bond_symbol_down[t->get_in1()], 
+					bond_symbol_down[t->get_in2()],
+					true ));
+
+	}
+
+	Tensor* t_identity = new Tensor(in_bonds[0], in_bonds[0]);
+	t_identity->putTensor(Dmera::Identity2());
+
+	for (Tensor* t : operators)        
+		info.push_back(TensorInfo(	t_identity, 
+					std::to_string(++tensor_idx), 
+					0, 
+					bond_symbol_down[t->get_out1()],
+					bond_symbol_up[t->get_out1()], 
+					0,
+					false ));
+
+	std::ofstream of("NetworkSheets/_temp_fullenv");
+
+	for (auto i : info)
+	{
+		if ((i.in1 == 0) && (i.out2 == 0))
+		{
+			of << i.name << ": " << i.in2 << " ; " << i.out1 << std::endl;
+			continue;
+		}
+		switch (i.t->get_type())
+		{
+			case(Tensor::Type::Unitary):
+				of << i.name << ": " << i.in1 << " " << i.in2 << " ; " << i.out1 << " " << i.out2 << std::endl;
+				break;
+
+			case(Tensor::Type::Singlet):
+				if (i.in1 == 0)
+					of << i.name << ": " << " ; " << i.out1 << " " << i.out2 << std::endl;
+				else
+					of << i.name << ": " << i.in1 << " " << i.in2 << " ;" << std::endl;
+				break;
+		}
+	}
+
+	
+
+	of << "TOUT: " << std::endl;
+	of.close();		
+
+	uni10::Network* network_test = new uni10::Network("NetworkSheets/_temp_fullenv");
+
+	for (auto i : info)
+	{
+		if (!i.trans)
+			network_test->putTensor(i.name, i.t->getTensor());
+		else
+			network_test->putTensorT(i.name, i.t->getTensor());
+	}
+
+	uni10::UniTensor energy = network_test->launch();
+
+	std::cout << energy << std::endl;
 }

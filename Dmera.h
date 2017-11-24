@@ -20,7 +20,7 @@ class Dmera
 
 		// Variational Updates
 
-		void VarUpdate();
+		double VarUpdate();
 
 		void check() const;
 
@@ -134,12 +134,18 @@ class Dmera
 
 		static uni10::UniTensor Singlet();
 
+		static uni10::UniTensor Identity();
+
+		static uni10::UniTensor Identity2();
+
 		uni10::Network* svd_restore;
 
 		void reset_flags();
 
 		std::vector<TensorInfo> TensorEnv(Tensor*);
+		std::vector<TensorInfo> FullEnv();
 		void VarUpdateTensor(Tensor*);
+		double Energy() const;
 
 		const int width;
 
@@ -151,6 +157,9 @@ class Dmera
 
 		std::map<Tensor*, std::vector<TensorInfo>> envs;
 		std::map<Tensor*, uni10::Network*> network;
+
+		std::vector<TensorInfo> full_env;
+		uni10::Network* full_network;
 };
 
 #endif //ifndef DMERA_H

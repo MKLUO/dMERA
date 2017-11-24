@@ -1,9 +1,13 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 #include <random>
 
 #include "Dmera.h"
+
+const int SITES = 2;
+const int EPOCH = 500;
 
 int main()
 {
@@ -14,19 +18,24 @@ int main()
 
 	std::vector<double> j;
 
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < SITES; ++i)
 		j.push_back(jdis(re));
 
 	Dmera case1(j, 0.01);
 
 	std::cout << case1.summary(false) << std::endl;
 
-    for (int i = 0; i < 100; ++i)
+	std::ofstream of("energy.gp");
+/*
+    for (int i = 0; i < EPOCH; ++i)
 	{
-		std::cout << "EPOCH: " << i << std::endl;
-		case1.VarUpdate();
-		case1.check();
+		std::cout << "EPOCH: " << i + 1 << std::endl;
+		of << case1.VarUpdate() << std::endl;
 	}
+*/
+	of.close();
+
+	case1.check();
 
 	return 0;
 }
