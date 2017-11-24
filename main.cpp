@@ -14,15 +14,19 @@ int main()
 
 	std::vector<double> j;
 
-    for (int i = 0; i < 40; ++i)
+    for (int i = 0; i < 8; ++i)
 		j.push_back(jdis(re));
 
 	Dmera case1(j, 0.01);
 
 	std::cout << case1.summary(false) << std::endl;
 
-	case1.VarUpdate();
-//	case1.check();
+    for (int i = 0; i < 100; ++i)
+	{
+		std::cout << "EPOCH: " << i << std::endl;
+		case1.VarUpdate();
+		case1.check();
+	}
 
 	return 0;
 }

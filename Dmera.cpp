@@ -1,4 +1,5 @@
 #include <vector>
+#include <random>
 #include <utility>
 #include <iomanip>
 #include <sstream>
@@ -66,6 +67,10 @@ int Dmera::Tensor::get_depth() const { return depth; }
 int Dmera::Tensor::get_idx1() const { return _idx1; }
 
 int Dmera::Tensor::get_idx2() const { return _idx2; }
+
+void Dmera::Tensor::putTensor(uni10::UniTensor T_) { T = T_; }
+
+uni10::UniTensor Dmera::Tensor::getTensor() const { return T; }
 
 Dmera::Bond::Bond(Tensor* t, int idx): in(t), _idx(idx)
 {
@@ -194,7 +199,29 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 
 
 	//Tensors and bonds created.
+    
 
+	//Create Environment Network & Info
+	for (Tensor* t : tensors)
+		if (t->get_type() == Tensor::Type::Unitary)
+			envs[t] = TensorEnv(t);
+	
+	//UniTensor initialize
+	for (Tensor* t : tensors)
+		switch (t->get_type())
+		{
+			case (Tensor::Type::Unitary): 
+				t->putTensor(Dmera::Random_Unitary());
+				break;
+			case (Tensor::Type::Singlet):
+				t->putTensor(Dmera::Singlet());
+				break;
+		}
+
+	for (Tensor* t : operators)
+		t->putTensor(Dmera::Random_Unitary());
+
+	svd_restore = new uni10::Network("NetworkSheets/svd_restore");
 }
 
 Dmera::Tensor* Dmera::Append_Tensor(Bond* b1, Bond* b2)
@@ -223,7 +250,51 @@ double Dmera::effective_j(double j, double j_l, double j_r, double delta)
 	return j_l * j_r / j / (1. + delta);
 }
 
-std::string Dmera::Tensor::get_type() const
+uni10::UniTensor Dmera::Random_Unitary()
+{
+	uni10::Bond b_in(uni10::BD_IN, 2);
+	uni10::Bond b_out(uni10::BD_OUT, 2);
+
+	std::vector<uni10::Bond> B;
+	B.push_back(b_in);
+	B.push_back(b_in);
+	B.push_back(b_out);
+	B.push_back(b_out);
+
+	uni10::UniTensor T(uni10::CTYPE, B);
+
+	std::random_device rd;
+	std::default_random_engine dre(rd());
+	std::uniform_int_distribution<int> unif(1, 50);
+
+	for (int i = 0; i < unif(dre); ++i)
+		T.orthoRand();
+
+	return T;
+}
+
+uni10::UniTensor Dmera::Singlet()
+{
+
+	uni10::Complex m[] = {	0.,		1.,
+							-1.,	0., };
+
+	uni10::Bond b_in(uni10::BD_IN, 2);
+
+	std::vector<uni10::Bond> B;
+	B.push_back(b_in);
+	B.push_back(b_in);
+
+	uni10::UniTensor T(uni10::CTYPE, B);
+
+    T.setRawElem(m);
+
+	return T;
+}
+
+Dmera::Tensor::Type Dmera::Tensor::get_type() const { return type; }
+
+std::string Dmera::Tensor::get_type_s() const
 {
 	switch (type)
 	{
@@ -236,7 +307,7 @@ std::string Dmera::Tensor::summary() const
 {
 	std::stringstream ss;
 
-	ss << "Type: " << get_type() << " | Depth: " << get_depth() << " | " << get_idx1() << " ~ " << get_idx2() << std::endl;
+	ss << "Type: " << get_type_s() << " | Depth: " << get_depth() << " | " << get_idx1() << " ~ " << get_idx2() << std::endl;
 
 	return ss.str();
 }
@@ -355,7 +426,7 @@ void Dmera::reset_flags()
 Dmera::TensorInfo::TensorInfo(Tensor* t_, std::string name_, int in1_, int in2_, int out1_, int out2_, bool trans_):
 	t(t_), name(name_), in1(in1_), in2(in2_), out1(out1_), out2(out2_), trans(trans_) {}
 
-std::string Dmera::TensorInfo::bonds()
+std::string Dmera::TensorInfo::bonds() const
 {
 	std::stringstream ss;
 	ss << in1 << " " << in2 << " | " << out1 << " " << out2;
@@ -363,15 +434,7 @@ std::string Dmera::TensorInfo::bonds()
 	return ss.str();
 }
 
-// Var-Update
-
-void Dmera::VarUpdate()
-{
-	VarUpdateTensor(tensors[0]);
-}
-
-
-void Dmera::VarUpdateTensor(Tensor* t0)
+std::vector<Dmera::TensorInfo> Dmera::TensorEnv(Tensor* t0)
 {
 	reset_flags();
 
@@ -395,10 +458,10 @@ void Dmera::VarUpdateTensor(Tensor* t0)
 		bond_symbol_down[b] = bond_symbol_up[b] + offset;
 	}
 
-	bond_symbol_up[t0->get_in1()]	= -1;
-	bond_symbol_up[t0->get_in2()]	= -2;
-	bond_symbol_up[t0->get_out1()]	= -3;
-	bond_symbol_up[t0->get_out2()]	= -4;
+	bond_symbol_up[t0->get_in1()]	= -3;
+	bond_symbol_up[t0->get_in2()]	= -4;
+	bond_symbol_up[t0->get_out1()]	= -1;
+	bond_symbol_up[t0->get_out2()]	= -2;
 
 	bond_symbol_up[0] = 0;
 	bond_symbol_down[0] = 0;
@@ -439,12 +502,73 @@ void Dmera::VarUpdateTensor(Tensor* t0)
 
 //	for (auto i : info)
 //		std::cout << i.t->summary() << " Bonds: " << i.bonds() << std::endl;
+                                                       
+  
+	std::ofstream of("NetworkSheets/_temp");
 
+	for (auto i : info)
+		switch (i.t->get_type())
+		{
+			case(Tensor::Type::Unitary):
+				of << i.name << ": " << i.in1 << " " << i.in2 << " ; " << i.out1 << " " << i.out2 << std::endl;
+				break;
+
+			case(Tensor::Type::Singlet):
+				if (i.in1 == 0)
+					of << i.name << ": " << " ; " << i.out1 << " " << i.out2 << std::endl;
+				else
+					of << i.name << ": " << i.in1 << " " << i.in2 << " ;" << std::endl;
+				break;
+		}
+
+	of << "TOUT: -1 -2; -3 -4" << std::endl;
+	of.close();		
+
+	network[t0] = new uni10::Network("NetworkSheets/_temp");
 
 	reset_flags();
+
+	return info;
 }
 		
+// Var-Update
+
+void Dmera::VarUpdate()
+{
+	for (Tensor* t : tensors)
+		if (t->get_type() == Tensor::Type::Unitary)
+		{
+			VarUpdateTensor(t);
+			std::cout << "|" << std::flush;
+		}
+	
+	std::cout << std::endl;
+}
+
+void Dmera::VarUpdateTensor(Tensor* t)
+{
+	for (auto info : envs[t])
+	{
+		if (!info.trans)
+			network[t]->putTensor(info.name, info.t->getTensor());
+		else
+			network[t]->putTensorT(info.name, info.t->getTensor());
+	}
+
+	uni10::UniTensor eff_env = network[t]->launch();
+
+	std::vector<uni10::Matrix> M_svd;
+	int labels[] = {-1, -2, -3, -4};
+	int label_groups[] = {2, 2};
+
+	std::vector<uni10::UniTensor> eff_env_svd = eff_env.hosvd(labels, label_groups, 2, M_svd);
+
+	svd_restore->putTensor("1", eff_env_svd[1]);
+	svd_restore->putTensorT("2", eff_env_svd[0]);
+
+	t->putTensor(svd_restore->launch() * -1);
+}
+
 void Dmera::check() const
 {
-
 }

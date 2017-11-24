@@ -22,6 +22,8 @@ class Dmera
 
 		void VarUpdate();
 
+		void check() const;
+
 	private:
 		class Tensor
 		{
@@ -42,13 +44,17 @@ class Dmera
 				int get_idx1() const;
 				int get_idx2() const;
 
-				std::string get_type() const;
+				Type get_type() const;
+				std::string get_type_s() const;
 				std::string summary() const;
 
 				void flag();
 				void unflag();
 				bool flaged() const;
 				void flag_caus();
+
+				void putTensor(uni10::UniTensor);
+				uni10::UniTensor getTensor() const;
 
 			private:
             	uni10::UniTensor T;
@@ -112,7 +118,7 @@ class Dmera
 		struct TensorInfo
 		{
 			TensorInfo(Tensor*, std::string, int, int, int, int, bool);
-			std::string bonds();			
+			std::string bonds() const;			
 			Tensor* t;
 			std::string name;
 			int in1, in2, out1, out2;
@@ -124,19 +130,27 @@ class Dmera
 
 		static double effective_j(double, double, double, double);
 
+		static uni10::UniTensor Random_Unitary();
+
+		static uni10::UniTensor Singlet();
+
+		uni10::Network* svd_restore;
+
 		void reset_flags();
 
-		const int width;
-
+		std::vector<TensorInfo> TensorEnv(Tensor*);
 		void VarUpdateTensor(Tensor*);
 
-		void check() const;
+		const int width;
 
 		std::vector<Tensor*>	tensors;
 		std::vector<Tensor*>	operators;
 		std::vector<Bond*>		bonds;
 		std::vector<Bond*>		in_bonds;
 		std::vector<Bond*>		op_bonds;
+
+		std::map<Tensor*, std::vector<TensorInfo>> envs;
+		std::map<Tensor*, uni10::Network*> network;
 };
 
 #endif //ifndef DMERA_H
