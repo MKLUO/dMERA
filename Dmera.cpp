@@ -249,7 +249,7 @@ uni10::UniTensor Dmera::Random_Unitary()
 	B.push_back(b_out);
 	B.push_back(b_out);
 
-	uni10::UniTensor T(uni10::CTYPE, B);
+	uni10::UniTensor T(RCTYPE, B);
 
 	std::random_device rd;
 	std::default_random_engine dre(rd());
@@ -273,7 +273,7 @@ uni10::UniTensor Dmera::Singlet()
 	B.push_back(b_in);
 	B.push_back(b_in);
 
-	uni10::UniTensor T(uni10::CTYPE, B);
+	uni10::UniTensor T(RCTYPE, B);
 
 	T.setRawElem(m);
 
@@ -297,7 +297,7 @@ uni10::UniTensor Dmera::Identity()
 	B.push_back(b_out);
 	B.push_back(b_out);
 
-	uni10::UniTensor T(uni10::CTYPE, B);
+	uni10::UniTensor T(RCTYPE, B);
 
 	T.setRawElem(m);
 
@@ -317,7 +317,7 @@ uni10::UniTensor Dmera::Identity2()
 	B.push_back(b_in);
 	B.push_back(b_out);
 
-	uni10::UniTensor T(uni10::CTYPE, B);
+	uni10::UniTensor T(RCTYPE, B);
 
 	T.setRawElem(m);
 

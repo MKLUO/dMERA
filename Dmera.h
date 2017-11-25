@@ -7,6 +7,8 @@
 
 #include <uni10.hpp>
 
+const auto RCTYPE = uni10::RTYPE;
+
 class Dmera
 {
 		class Tensor;

@@ -6,7 +6,7 @@
 
 #include "Dmera.h"
 
-const int SITES = 2;
+const int SITES = 8;
 const int EPOCH = 500;
 
 int main()
@@ -25,16 +25,16 @@ int main()
 
 	std::cout << case1.summary(false) << std::endl;
 
-	std::ofstream of("energy.gp");
-/*
+/*	std::ofstream of("energy.gp");
+
     for (int i = 0; i < EPOCH; ++i)
 	{
 		std::cout << "EPOCH: " << i + 1 << std::endl;
 		of << case1.VarUpdate() << std::endl;
 	}
-*/
-	of.close();
 
+	of.close();
+*/
 	case1.check();
 
 	return 0;
