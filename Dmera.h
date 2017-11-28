@@ -14,7 +14,7 @@ class Dmera
 	public:
 		Dmera(std::vector<double>, double);
 
-		std::string summary(bool) const;
+//		std::string summary(bool) const;
 
 		double VarUpdate();
 
@@ -28,13 +28,14 @@ class Dmera
 				int get_idx() const;
 				uni10::UniTensor tensor(std::string) const;
 
+				void update(uni10::UniTensor, uni10::UniTensor, uni10::UniTensor);
+
 				std::map<std::string, uni10::UniTensor> t;
 				std::array<uni10::UniTensor, 3> dm; // density matrix
 				std::array<uni10::UniTensor, 5> eh; // effective hamiltonian
 			private:
 				const int idx;
 		};
-
 
 		class NetworkForm
 		{
@@ -47,6 +48,7 @@ class Dmera
 				uni10::Network* network;
 		};
 
+		void BuildMetworkForms();
 
 		// Utils
 		static double effective_j(double, double, double, double);
@@ -54,8 +56,7 @@ class Dmera
 		static uni10::UniTensor Random_Unitary();
 		static uni10::UniTensor Singlet();
 		static uni10::UniTensor Identity();
-		static uni10::UniTensor Identity2();
-		static uni10::UniTensor DmSinglet(int);
+		static uni10::UniTensor TwoSiteHam(double, double);
 
 		static uni10::UniTensor eigenshift(uni10::UniTensor);
 		static uni10::UniTensor svdSolveMinimal(uni10::UniTensor);
@@ -65,7 +66,7 @@ class Dmera
 		std::vector<Block*> blocks;
 		std::map<std::string, std::vector<NetworkForm>> network;
 
-		std::vector<uni10::UniTensor> dm_init;
+		std::array<uni10::UniTensor, 3> dm_init;
 		std::vector<uni10::UniTensor> eh_init;
 };
 
