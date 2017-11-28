@@ -9,11 +9,18 @@
 
 #include <iostream>
 
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_eigen.h>
+
 #include <uni10.hpp>
 
 #include "Dmera.h"
 
 const std::string TEMP_FNAME("NetworkSheets/_temp");
+const std::string SVD_FNAME("NetworkSheets/SVD");
+const std::string DMS_0_FNAME("NetworkSheets/DMS_0");
+const std::string DMS_1_FNAME("NetworkSheets/DMS_1");
+const std::string PNAME("NetworkSheets/");
 
 Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 {                                  
@@ -59,19 +66,19 @@ Dmera::Block::Block(int idx_): idx(idx_)
 uni10::UniTensor Dmera::Block::tensor(std::string name) const
 {
 	if		(name == "l")	return t["l"];
-    else if	(name == "r")	return t["r"];
-    else if	(name == "u")	return t["u"];
-    else if	(name == "s")	return t["s"];
-        
-    else if	(name == "dm0")	return dm[0];
-    else if	(name == "dm1") return dm[1];
-    else if	(name == "dm2") return dm[2];
+	else if	(name == "r")	return t["r"];
+	else if	(name == "u")	return t["u"];
+	else if	(name == "s")	return t["s"];
 
-    else if	(name == "eh0") return eh[0];
-    else if	(name == "eh1") return eh[1];
-    else if	(name == "eh2") return eh[2];
-    else if	(name == "eh3") return eh[3];
-    else if	(name == "eh4") return eh[4];
+	else if	(name == "dm0")	return dm[0];
+	else if	(name == "dm1") return dm[1];
+	else if	(name == "dm2") return dm[2];
+
+	else if	(name == "eh0") return eh[0];
+	else if	(name == "eh1") return eh[1];
+	else if	(name == "eh2") return eh[2];
+	else if	(name == "eh3") return eh[3];
+	else if	(name == "eh4") return eh[4];
 }
 
 void Dmera::BuildNetworkForms()
@@ -113,54 +120,54 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 {
 	class Nodes
 	{
-	public:
-		void append(std::string name, int idx)
-		{
-			TensorList[name] = {up[idx], up[idx + 1], bond, bond + 1};
-			up[idx]		= bond;
-			up[idx + 1]	= bond + 1;
-			bond += 2;
-		}
-		void appendT(std::string name, int idx)
-		{
-			TensorList[name] = {bond, bond + 1, down[idx], down[idx + 1]};
-			down[idx]		= bond;
-			down[idx + 1]	= bond + 1;
-			bond += 2;
-		}           
-		void appendS(std::string name, int idx)
-		{
-			TensorList[name] = {up[idx], up[idx + 1], 0, 0};
-			up[idx]		= 0;
-			up[idx + 1]	= 0;
-		}            
-		void appendST(std::string name, int idx)
-		{
-			TensorList[name] = {0, 0, down[idx], down[idx + 1]};
-			down[idx]		= 0;
-			down[idx + 1]	= 0;
-		}
-		void appendF(std::string name, int idx)
-		{
-			int idx_next;
-			switch (idx)
+		public:
+			void append(std::string name, int idx)
 			{
-				case (0): idx_next = 1; break;
-				case (1): idx_next = 4; break;
-				case (4): idx_next = 5; break;
+				TensorList[name] = {up[idx], up[idx + 1], bond, bond + 1};
+				up[idx]		= bond;
+				up[idx + 1]	= bond + 1;
+				bond += 2;
 			}
-			TensorList[name] = {up[idx], up[idx_next], down[idx], down[idx_next]};
-		}
+			void appendT(std::string name, int idx)
+			{
+				TensorList[name] = {bond, bond + 1, down[idx], down[idx + 1]};
+				down[idx]		= bond;
+				down[idx + 1]	= bond + 1;
+				bond += 2;
+			}           
+			void appendS(std::string name, int idx)
+			{
+				TensorList[name] = {up[idx], up[idx + 1], 0, 0};
+				up[idx]		= 0;
+				up[idx + 1]	= 0;
+			}            
+			void appendST(std::string name, int idx)
+			{
+				TensorList[name] = {0, 0, down[idx], down[idx + 1]};
+				down[idx]		= 0;
+				down[idx + 1]	= 0;
+			}
+			void appendF(std::string name, int idx)
+			{
+				int idx_next;
+				switch (idx)
+				{
+					case (0): idx_next = 1; break;
+					case (1): idx_next = 4; break;
+					case (4): idx_next = 5; break;
+				}
+				TensorList[name] = {up[idx], up[idx_next], down[idx], down[idx_next]};
+			}
 
-	private:
-        std::map<std::string, std::array<int, 4>> TensorList;
+		private:
+			std::map<std::string, std::array<int, 4>> TensorList;
 
-		std::array<int, 6> up	= {1, 2, 3, 4, 5, 6};
-		std::array<int, 6> down	= {1, 2, 3, 4, 5, 6};
-		int bond = 7;
+			std::array<int, 6> up	= {1, 2, 3, 4, 5, 6};
+			std::array<int, 6> down	= {1, 2, 3, 4, 5, 6};
+			int bond = 7;
 	};
 
-    Nodes nodes;
+	Nodes nodes;
 
 	if (type == "DM")	nodes.append("_", idx1);
 	else				nodes.append("eh" + std::string(idx1), idx1);
@@ -174,9 +181,9 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 	if ((type == "EN") && (idx2 == 2))	nodes.append("_", 3);			
 	else								nodes.append("r", 3);
 
-    nodes.appendT("ut", 2);
-    nodes.appendT("lt", 1);
-    nodes.appendT("rt", 3);
+	nodes.appendT("ut", 2);
+	nodes.appendT("lt", 1);
+	nodes.appendT("rt", 3);
 
 	nodes.appendS("s", 2);
 	nodes.appendST("st", 2);
@@ -196,7 +203,8 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 
 	std::map<std::string, std::array<int, 4>> tensorList = nodes.getList();
 
-	std::ofstream of(TEMP_FNAME);
+	std::string fname = PNAME + std::string(type) + std::string(idx1) + std::string(idx2) + std::string(idx3);
+	std::ofstream of(fname);
 
 	for (auto t : tensorList)
 	{
@@ -216,14 +224,14 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 		else
 			of << name << " : " << bonds[0] << " " << bonds[1] << " ; " << bonds[2] << " " << bonds[3] << std::endl;
 
-        symbols.push_back(name);
+		symbols.push_back(name);
 	}
 
 	of << "TOUT : " << bonds_tout[2] << " " << bonds_tout[3] << " ; " << bonds_tout[0] << " " << bonds_tout[1] << std::endl;
 
 	of.close();
 
-	network = new uni10::Network(TEMP_FNAME);
+	network = new uni10::Network(fname);
 }
 
 uni10::UniTensor Dmera::NetworkForm::launch(Block* b)
@@ -314,13 +322,13 @@ Dmera::VarUpdate()
 			+ network["enr"][2].launch(b) 
 			+ network["enr"][3].launch(b);
 
-		t_l = eigenshift(t_l);
-		t_u = eigenshift(t_u);
-		t_r = eigenshift(t_r);
+		t_l = Dmera::eigenshift(t_l);
+		t_u = Dmera::eigenshift(t_u);
+		t_r = Dmera::eigenshift(t_r);
 
 		b->update(	Dmera::svdSolveMinimal(t_l), 
-					Dmera::svdSolveMinimal(t_u), 
-					Dmera::svdSolveMinimal(t_r));
+				Dmera::svdSolveMinimal(t_u), 
+				Dmera::svdSolveMinimal(t_r));
 
 
 		// Ascend Hamiltonian
@@ -342,8 +350,8 @@ Dmera::VarUpdate()
 
 		eh[l]	= network["eha"][0].launch(b);
 		eh[c]	= network["eha"][1].launch(b) 
-				+ network["eha"][2].launch(b)
-				+ network["eha"][3].launch(b);
+			+ network["eha"][2].launch(b)
+			+ network["eha"][3].launch(b);
 		eh[r]	= network["eha"][4].launch(b); 
 
 	}
@@ -443,4 +451,57 @@ uni10::UniTensor Dmera::Identity2()
 	T.setRawElem(m);
 
 	return T;
+}
+
+uni10::UniTensor Dmera::DmSinglet(int type)
+{
+	uni10::Network* N;
+	if (type == 0)
+		N = new uni10::Network(DMS_0_FNAME); 
+	else if (type == 1)
+		N = new uni10::Network(DMS_1_FNAME);
+
+	N->putTensor("s", Dmera::Singlet());
+	N->putTensorT("st", Dmera::Singlet());
+
+	return N->launch();
+}
+
+uni10::UniTensor Dmera::eigenshift(uni10::UniTensor input)
+{
+	uni10::Matrix input_m = input.getRawElem();
+	double data[4][4];
+
+	for (int i = 0; i < 4; ++i)
+		for (int j = 0; j < 4; ++j)
+			data[i][j] = input_m[i][j];
+
+	gsl_matrix_view m	= gsl_matrix_view_array(data, 4, 4);
+	gsl_vector *eval	= gsl_vector_alloc(4);
+	gsl_matrix *evec	= gsl_matrix_alloc(4, 4);
+
+	gsl_eigen_symmv_workspace * w = gsl_eigen_symmv_alloc(4);
+	gsl_eigen_symmv(&m.matrix, eval, evec, w);
+	gsl_eigen_symmv_free(w);
+
+	gsl_eigen_symmv_sort(eval, evec, GSL_EIGEN_SORT_VAL_DESC);
+
+	double eval_0 = gsl_vector_get(eval, 0);
+
+	return input - eval_0 * Dmera::Identity();	
+}
+
+uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input)
+{
+	std::vector<uni10::Matrix> M_svd;
+	int labels[] = {-1, -2, -3, -4};
+	int label_groups[] = {2, 2};
+
+	std::vector<uni10::UniTensor> T_svd = input.hosvd(labels, label_groups, 2, M_svd);
+
+	uni10::Network SVD(SVD_FNAME);
+	UP.putTensor("1", T_svd[1]);
+	UP.putTensorT("2", T_svd[0]);
+
+	return (-1) * SVD.launch();
 }

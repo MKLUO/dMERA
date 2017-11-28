@@ -55,7 +55,10 @@ class Dmera
 		static uni10::UniTensor Singlet();
 		static uni10::UniTensor Identity();
 		static uni10::UniTensor Identity2();
-		static uni10::UniTensor DmSinglet();
+		static uni10::UniTensor DmSinglet(int);
+
+		static uni10::UniTensor eigenshift(uni10::UniTensor);
+		static uni10::UniTensor svdSolveMinimal(uni10::UniTensor);
         
 		const int width;
 
