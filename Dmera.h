@@ -24,29 +24,27 @@ class Dmera
     	class Block
 		{
 			public:
+				Block(int);
 				int get_idx() const;
+				uni10::UniTensor tensor(std::string) const;
 
-			private:
-				const int idx;
-
-				uni10::UniTensor t_l;
-				uni10::UniTensor t_u;
-				uni10::UniTensor t_r;
-
+				std::map<std::string, uni10::UniTensor> t;
 				std::array<uni10::UniTensor, 3> dm; // density matrix
 				std::array<uni10::UniTensor, 5> eh; // effective hamiltonian
+			private:
+				const int idx;
 		};
 
 
 		class NetworkForm
 		{
 			public:
+				NetworkForm(std::string, int, int, int);
 				uni10::UniTensor launch(Block*) const;
 
 			private:
-				const int n;
 				std::vector<std::string> symbols; //symbol used in block
-				uni10::Network network;
+				uni10::Network* network;
 		};
 
 
@@ -57,11 +55,12 @@ class Dmera
 		static uni10::UniTensor Singlet();
 		static uni10::UniTensor Identity();
 		static uni10::UniTensor Identity2();
-
+		static uni10::UniTensor DmSinglet();
+        
 		const int width;
 
 		std::vector<Block*> blocks;
-		std::map<NetworkForm> network;
+		std::map<std::string, std::vector<NetworkForm>> network;
 
 		std::vector<uni10::UniTensor> dm_init;
 		std::vector<uni10::UniTensor> eh_init;
