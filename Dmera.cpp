@@ -520,6 +520,7 @@ uni10::UniTensor Dmera::TwoSiteHam(double j, double delta)
 
 uni10::UniTensor Dmera::eigenshift(uni10::UniTensor input)
 {
+/*
 	uni10::Matrix input_m = input.getRawElem();
 	double data[16];
 
@@ -540,6 +541,12 @@ uni10::UniTensor Dmera::eigenshift(uni10::UniTensor input)
 	double eval_0 = gsl_vector_get(eval, 0);
 
 	return input + (-1) * eval_0 * Dmera::Identity();	
+*/
+
+	std::vector<uni10::Matrix> m = input.getRawElem().eigh();
+	double max_ev = m[0].max();
+
+	return input + (-1) * max_ev * Dmera::Identity();
 }
 
 uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input)
