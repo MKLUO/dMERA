@@ -16,17 +16,16 @@
 
 #include "Dmera.h"
 
-const std::string TEMP_FNAME("NetworkSheets/_temp");
 const std::string SVD_FNAME("NetworkSheets/SVD");
 const std::string DMS_0_FNAME("NetworkSheets/DMS_0");
 const std::string DMS_1_FNAME("NetworkSheets/DMS_1");
-const std::string PNAME("NetworkSheets/");
+const std::string PNAME("NetworkSheets/_");
 
 Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 {                                  
 	// DM & EH init
 
-	eh_init.resize(2);
+	dm_init.resize(2);
 	dm_init[0] = Dmera::DmSinglet(0);
 	dm_init[1] = Dmera::DmSinglet(1);
 
@@ -58,6 +57,9 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 		else
 			js.erase(js.begin() + idx, js.begin() + idx + 2);
 	}
+
+	// Build Network Forms
+	BuildNetworkForms();
 }
 
 Dmera::Block::Block(int idx_): idx(idx_)
@@ -175,6 +177,13 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 					case (4): idx_next = 5; break;
 				}
 				TensorList[name] = {up[idx], up[idx_next], down[idx], down[idx_next]};
+
+				switch (idx)
+				{
+					case (0): TensorList["r"][3] = TensorList["rt"][1]; break;
+					case (1): break;
+					case (4): TensorList["l"][2] = TensorList["lt"][0]; break;
+				}
 			}
 
 			std::map<std::string, std::array<int, 4>> getList() const { return TensorList; }
@@ -240,16 +249,16 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 		}
 
 		if (bonds[0] == 0)
-			of << name << " : ; " << bonds[2] << " " << bonds[3] << std::endl;
+			of << name << "\t:\t\t\t;\t" << bonds[2] << "\t" << bonds[3] << std::endl;
 		else if (bonds[2] == 0)  
-			of << name << " : " << bonds[0] << " " << bonds[1] << " ; " << std::endl;
+			of << name << "\t:\t" << bonds[0] << "\t" << bonds[1] << "\t;" << std::endl;
 		else
-			of << name << " : " << bonds[0] << " " << bonds[1] << " ; " << bonds[2] << " " << bonds[3] << std::endl;
+			of << name << "\t:\t" << bonds[0] << "\t" << bonds[1] << "\t;\t" << bonds[2] << "\t" << bonds[3] << std::endl;
 
 		symbols.push_back(name);
 	}
 
-	of << "TOUT : " << bonds_tout[2] << " " << bonds_tout[3] << " ; " << bonds_tout[0] << " " << bonds_tout[1] << std::endl;
+	of << "TOUT\t:\t" << bonds_tout[2] << "\t" << bonds_tout[3] << "\t;\t" << bonds_tout[0] << "\t" << bonds_tout[1] << std::endl;
 
 	of.close();
 
