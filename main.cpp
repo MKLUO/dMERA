@@ -23,7 +23,7 @@ int main()
 
 	Dmera case1(j, 0.01);
 
-	std::cout << case1.summary(false) << std::endl;
+//	std::cout << case1.summary() << std::endl;
 
 /*	std::ofstream of("energy.gp");
 
@@ -35,7 +35,7 @@ int main()
 
 	of.close();
 */
-	case1.check();
+//	case1.check();
 
 	return 0;
 }

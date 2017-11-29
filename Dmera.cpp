@@ -26,8 +26,9 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 {                                  
 	// DM & EH init
 
-	dm_init[0] = DmSinglet(0);
-	dm_init[1] = DmSinglet(1);
+	eh_init.resize(2);
+	dm_init[0] = Dmera::DmSinglet(0);
+	dm_init[1] = Dmera::DmSinglet(1);
 
 	eh_init.resize(width);
 	for (int i = 0; i < width; ++i)
@@ -78,10 +79,10 @@ void Dmera::Block::update(uni10::UniTensor l, uni10::UniTensor u, uni10::UniTens
 
 uni10::UniTensor Dmera::Block::tensor(std::string name) const
 {
-	if		(name == "l")	return t["l"];
-	else if	(name == "r")	return t["r"];
-	else if	(name == "u")	return t["u"];
-	else if	(name == "s")	return t["s"];
+	if		(name == "l")	return t.at("l");
+	else if	(name == "r")	return t.at("r");
+	else if	(name == "u")	return t.at("u");
+	else if	(name == "s")	return t.at("s");
 
 	else if	(name == "dm0")	return dm[0];
 	else if	(name == "dm1") return dm[1];
@@ -129,8 +130,12 @@ void Dmera::BuildNetworkForms()
 	network["enr"][3] = NetworkForm("EN", 4, 2, 2);
 }   
 
+Dmera::NetworkForm::NetworkForm() { }
+
 Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 {
+	// The class 'Nodes' is for constructing networks.
+
 	class Nodes
 	{
 		public:
@@ -177,15 +182,15 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 		private:
 			std::map<std::string, std::array<int, 4>> TensorList;
 
-			std::array<int, 6> up	= {1, 2, 3, 4, 5, 6};
-			std::array<int, 6> down	= {1, 2, 3, 4, 5, 6};
+			std::array<int, 6> up	{{1, 2, 3, 4, 5, 6}};
+			std::array<int, 6> down	{{1, 2, 3, 4, 5, 6}};
 			int bond = 7;
 	};
 
 	Nodes nodes;
 
 	if (type == "DM")	nodes.append("_", idx1);
-	else				nodes.append("eh" + std::string(idx1), idx1);
+	else				nodes.append("eh" + std::to_string(idx1), idx1);
 
 	if ((type == "EN") && (idx2 == 1))	nodes.append("_", 2);			
 	else								nodes.append("u", 2);
@@ -211,14 +216,14 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 	}
 	else 
 	{
-		if (idx3 == 0)	nodes.appendF("dm" + std::string(idx3), 0);
-		if (idx3 == 1)	nodes.appendF("dm" + std::string(idx3), 1);
-		if (idx3 == 2)	nodes.appendF("dm" + std::string(idx3), 4);
+		if (idx3 == 0)	nodes.appendF("dm" + std::to_string(idx3), 0);
+		if (idx3 == 1)	nodes.appendF("dm" + std::to_string(idx3), 1);
+		if (idx3 == 2)	nodes.appendF("dm" + std::to_string(idx3), 4);
 	}
 
 	std::map<std::string, std::array<int, 4>> tensorList = nodes.getList();
 
-	std::string fname = PNAME + std::string(type) + std::string(idx1) + std::string(idx2) + std::string(idx3);
+	std::string fname = PNAME + std::string(type) + std::to_string(idx1) + std::to_string(idx2) + std::to_string(idx3);
 	std::ofstream of(fname);
 
 	std::array<int, 4> bonds_tout;
@@ -253,6 +258,9 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 
 uni10::UniTensor Dmera::NetworkForm::launch(Block* b) const
 {
+	// Insert tensors from 'b' into 'network' according to 'symbols'
+	// TODO: Using putTensorT here, thus only allowing RTYPE
+
 	for ( auto name : symbols )
 	{
 		if		(name == "lt")	network->putTensorT(name,	b->tensor("l"));
@@ -265,7 +273,7 @@ uni10::UniTensor Dmera::NetworkForm::launch(Block* b) const
 	return network->launch();
 }
 
-Dmera::VarUpdate()
+void Dmera::VarUpdate()
 {
 	// Build descending density matrix
 
@@ -277,21 +285,24 @@ Dmera::VarUpdate()
 		const int idx = b->get_idx();
 		const bool boundry = (idx == (dm.size() + 1));
 
-		if (boundry) // boundry contraction
+		// Block obtains density matrices from global array
+		if (boundry)
 			for (int j = 0; j < 3; ++j)
 				b->dm[j] = dm[Dmera::index(j - 2, dm.size())]; 
 		else
 			for (int j = 0; j < 3; ++j)
 				b->dm[j] = dm[Dmera::index(idx + j - 2, dm.size())];  
 
-		if (boundry) // boundry contraction
+		// Resize global den. mat. array
+		if (boundry)
 		{
 			dm.insert(dm.begin(), 0);
 			dm.push_back(0);
 		}
 		else
-			dm.insert(dm.begin + idx, 2, 0);
+			dm.insert(dm.begin() + idx, 2, 0);
 
+		// Descend den. mat.
 		for (int j = 0; j < 5; ++j)
 			dm[Dmera::index(idx + j - 2, dm.size())] = network["dmd"][j].launch(b);
 
@@ -307,9 +318,12 @@ Dmera::VarUpdate()
 		const int idx = b->get_idx();
 		const bool boundry = (idx == (eh.size() - 1));
 
+		// Block obtains effective hamiltonians from global array
 		for (int j = 0; j < 5; ++j)
 			b->eh[j] = eh[Dmera::index(idx + j - 2, eh.size())];
 
+
+		// Resize global eff. ham. array
 		if (boundry)
 		{
 			eh.erase(eh.begin());
@@ -318,7 +332,7 @@ Dmera::VarUpdate()
 		else
 			eh.erase(eh.begin() + idx, eh.begin() + idx + 2);
 
-		// Var. Update
+		// Var. update
 
 		uni10::UniTensor t_l, t_u, t_r;
 
@@ -345,7 +359,7 @@ Dmera::VarUpdate()
 				Dmera::svdSolveMinimal(t_r));
 
 
-		// Ascend Hamiltonian
+		// Ascend eff ham.
 
 		int l, c, r;
 
@@ -383,6 +397,7 @@ int Dmera::index(int idx, int size)
 
 uni10::UniTensor Dmera::Random_Unitary()
 {
+	// TODO: seems like some problem creating complex unitary. The randomness also seems weird.
 	uni10::Bond b_in(uni10::BD_IN, 2);
 	uni10::Bond b_out(uni10::BD_OUT, 2);
 
@@ -427,10 +442,12 @@ uni10::UniTensor Dmera::Singlet()
 uni10::UniTensor Dmera::Identity()
 {
 
-	uni10::Complex m[] = {	1.,	0., 0., 0.,
+	uni10::Complex m[] = {	
+		1.,	0., 0., 0.,
 		0., 1., 0., 0.,
 		0., 0., 1., 0.,
-		0., 0., 0., 1. };
+		0., 0., 0., 1. 
+	};
 
 	uni10::Bond b_in(uni10::BD_IN, 2);
 	uni10::Bond b_out(uni10::BD_OUT, 2);
@@ -439,26 +456,6 @@ uni10::UniTensor Dmera::Identity()
 	B.push_back(b_in);
 	B.push_back(b_in);
 	B.push_back(b_out);
-	B.push_back(b_out);
-
-	uni10::UniTensor T(RCTYPE, B);
-
-	T.setRawElem(m);
-
-	return T;
-}
-
-uni10::UniTensor Dmera::Identity2()
-{
-
-	uni10::Complex m[] = {	1.,	0.,
-		0., 1. };
-
-	uni10::Bond b_in(uni10::BD_IN, 2);
-	uni10::Bond b_out(uni10::BD_OUT, 2);
-
-	std::vector<uni10::Bond> B;
-	B.push_back(b_in);
 	B.push_back(b_out);
 
 	uni10::UniTensor T(RCTYPE, B);
@@ -479,7 +476,10 @@ uni10::UniTensor Dmera::DmSinglet(int type)
 	N->putTensor("s", Dmera::Singlet());
 	N->putTensorT("st", Dmera::Singlet());
 
-	return N->launch();
+	uni10::UniTensor T = N->launch();
+	delete N;
+
+	return T;
 }
 
 uni10::UniTensor Dmera::TwoSiteHam(double j, double delta)
@@ -504,7 +504,7 @@ uni10::UniTensor Dmera::TwoSiteHam(double j, double delta)
 			M[4 * j + i] = 1.;
 		}
 
-	T.putRawElem(M);
+	T.setRawElem(M);
 
 	return T;
 }
@@ -512,11 +512,11 @@ uni10::UniTensor Dmera::TwoSiteHam(double j, double delta)
 uni10::UniTensor Dmera::eigenshift(uni10::UniTensor input)
 {
 	uni10::Matrix input_m = input.getRawElem();
-	double data[4][4];
+	double data[16];
 
 	for (int i = 0; i < 4; ++i)
 		for (int j = 0; j < 4; ++j)
-			data[i][j] = input_m[i][j];
+			data[4 * i + j] = input_m[4 * i + j];
 
 	gsl_matrix_view m	= gsl_matrix_view_array(data, 4, 4);
 	gsl_vector *eval	= gsl_vector_alloc(4);
@@ -530,7 +530,7 @@ uni10::UniTensor Dmera::eigenshift(uni10::UniTensor input)
 
 	double eval_0 = gsl_vector_get(eval, 0);
 
-	return input - eval_0 * Dmera::Identity();	
+	return input + (-1) * eval_0 * Dmera::Identity();	
 }
 
 uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input)
@@ -542,8 +542,8 @@ uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input)
 	std::vector<uni10::UniTensor> T_svd = input.hosvd(labels, label_groups, 2, M_svd);
 
 	uni10::Network SVD(SVD_FNAME);
-	UP.putTensor("1", T_svd[1]);
-	UP.putTensorT("2", T_svd[0]);
+	SVD.putTensor("1", T_svd[1]);
+	SVD.putTensorT("2", T_svd[0]);
 
 	return (-1) * SVD.launch();
 }

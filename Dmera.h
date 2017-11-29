@@ -16,7 +16,7 @@ class Dmera
 
 //		std::string summary(bool) const;
 
-		double VarUpdate();
+		void VarUpdate();
 
 		void check() const;
 
@@ -40,6 +40,7 @@ class Dmera
 		class NetworkForm
 		{
 			public:
+				NetworkForm();
 				NetworkForm(std::string, int, int, int);
 				uni10::UniTensor launch(Block*) const;
 
@@ -48,7 +49,7 @@ class Dmera
 				uni10::Network* network;
 		};
 
-		void BuildMetworkForms();
+		void BuildNetworkForms();
 
 		// Utils
 		static double effective_j(double, double, double, double);
@@ -56,6 +57,7 @@ class Dmera
 		static uni10::UniTensor Random_Unitary();
 		static uni10::UniTensor Singlet();
 		static uni10::UniTensor Identity();
+		static uni10::UniTensor DmSinglet(int);
 		static uni10::UniTensor TwoSiteHam(double, double);
 
 		static uni10::UniTensor eigenshift(uni10::UniTensor);
@@ -66,7 +68,7 @@ class Dmera
 		std::vector<Block*> blocks;
 		std::map<std::string, std::vector<NetworkForm>> network;
 
-		std::array<uni10::UniTensor, 3> dm_init;
+		std::vector<uni10::UniTensor> dm_init;
 		std::vector<uni10::UniTensor> eh_init;
 };
 

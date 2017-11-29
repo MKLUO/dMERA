@@ -1,6 +1,6 @@
 CC			= g++
 CFLAGS		= -std=c++11
-LIBS		= -luni10
+LIBS		= -luni10 -lgsl
 INCLUDES	= -I/usr/local/uni10/include
 DBG			= -g
 SOURCES		= Dmera.cpp
