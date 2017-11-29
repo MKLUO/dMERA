@@ -23,19 +23,9 @@ int main()
 
 	Dmera case1(j, 0.01);
 
-//	std::cout << case1.summary() << std::endl;
+	case1.VarUpdate();
 
-/*	std::ofstream of("energy.gp");
-
-    for (int i = 0; i < EPOCH; ++i)
-	{
-		std::cout << "EPOCH: " << i + 1 << std::endl;
-		of << case1.VarUpdate() << std::endl;
-	}
-
-	of.close();
-*/
-//	case1.check();
+	case1.check();
 
 	return 0;
 }

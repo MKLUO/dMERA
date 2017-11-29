@@ -72,11 +72,9 @@ Dmera::Block::Block(int idx_): idx(idx_)
 
 int Dmera::Block::get_idx() const { return idx; }
 
-void Dmera::Block::update(uni10::UniTensor l, uni10::UniTensor u, uni10::UniTensor r) 
+void Dmera::Block::update(std::string name, uni10::UniTensor new_t)
 {
-	t["l"] = l;
-	t["u"] = u;
-	t["r"] = r;
+	t[name] = new_t;
 }
 
 uni10::UniTensor Dmera::Block::tensor(std::string name) const
@@ -345,27 +343,28 @@ void Dmera::VarUpdate()
 
 		uni10::UniTensor t_l, t_u, t_r;
 
+		t_u	= network["enu"][0].launch(b)
+			+ network["enu"][1].launch(b) 
+			+ network["enu"][2].launch(b);
+
+		t_u = Dmera::eigenshift(t_u);
+		b->update("u", Dmera::svdSolveMinimal(t_u));
+
 		t_l	= network["enl"][0].launch(b)
 			+ network["enl"][1].launch(b) 
 			+ network["enl"][2].launch(b) 
 			+ network["enl"][3].launch(b);
 
-		t_u	= network["enu"][0].launch(b)
-			+ network["enu"][1].launch(b) 
-			+ network["enu"][2].launch(b);
+		t_l = Dmera::eigenshift(t_l);
+		b->update("l", Dmera::svdSolveMinimal(t_l));
 
 		t_r	= network["enr"][0].launch(b)
 			+ network["enr"][1].launch(b) 
 			+ network["enr"][2].launch(b) 
 			+ network["enr"][3].launch(b);
 
-		t_l = Dmera::eigenshift(t_l);
-		t_u = Dmera::eigenshift(t_u);
 		t_r = Dmera::eigenshift(t_r);
-
-		b->update(	Dmera::svdSolveMinimal(t_l), 
-				Dmera::svdSolveMinimal(t_u), 
-				Dmera::svdSolveMinimal(t_r));
+		b->update("r", Dmera::svdSolveMinimal(t_r));
 
 
 		// Ascend eff ham.
@@ -555,6 +554,7 @@ uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input)
 	int labels[] = {-1, -2, -3, -4};
 	int label_groups[] = {2, 2};
 
+	input.setLabel(labels);
 	std::vector<uni10::UniTensor> T_svd = input.hosvd(labels, label_groups, 2, M_svd);
 
 	uni10::Network SVD(SVD_FNAME);
@@ -562,4 +562,9 @@ uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input)
 	SVD.putTensorT("2", T_svd[0]);
 
 	return (-1) * SVD.launch();
+}
+
+void Dmera::check() const
+{
+	
 }

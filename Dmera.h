@@ -28,7 +28,7 @@ class Dmera
 				int get_idx() const;
 				uni10::UniTensor tensor(std::string) const;
 
-				void update(uni10::UniTensor, uni10::UniTensor, uni10::UniTensor);
+				void update(std::string, uni10::UniTensor);
 
 				std::map<std::string, uni10::UniTensor> t;
 				std::array<uni10::UniTensor, 3> dm; // density matrix
