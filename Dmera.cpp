@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 
+#include <fstream>
 #include <iostream>
 
 #include <gsl/gsl_math.h>
@@ -60,6 +61,8 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 
 	// Build Network Forms
 	BuildNetworkForms();
+
+	of = std::ofstream("_energy");
 }
 
 Dmera::Block::Block(int idx_): idx(idx_)
@@ -88,11 +91,11 @@ uni10::UniTensor Dmera::Block::tensor(std::string name) const
 	else if	(name == "dm1") return dm[1];
 	else if	(name == "dm2") return dm[2];
 
-	else if	(name == "eh0") return eh[0];
-	else if	(name == "eh1") return eh[1];
-	else if	(name == "eh2") return eh[2];
-	else if	(name == "eh3") return eh[3];
-	else if	(name == "eh4") return eh[4];
+	else if	(name == "eh0") return ehs[0];
+	else if	(name == "eh1") return ehs[1];
+	else if	(name == "eh2") return ehs[2];
+	else if	(name == "eh3") return ehs[3];
+	else if	(name == "eh4") return ehs[4];
 }
 
 void Dmera::BuildNetworkForms()
@@ -137,7 +140,7 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 	// The class 'Nodes' is for constructing networks.
 
 	class Nodes
-	{
+	{          
 		public:
 			void append(std::string name, int idx)
 			{
@@ -327,7 +330,11 @@ void Dmera::VarUpdate()
 
 		// Block obtains effective hamiltonians from global array
 		for (int j = 0; j < 5; ++j)
+		{
 			b->eh[j] = eh[Dmera::index(idx + j - 2, eh.size())];
+
+			b->ehs[j] = Dmera::eigenshift(b->eh[j], b->es[j]);
+		}
 
 
 		// Resize global eff. ham. array
@@ -342,30 +349,38 @@ void Dmera::VarUpdate()
 		// Var. update
 
 		uni10::UniTensor t_l, t_u, t_r;
+		double E; // energy recording
 
+for (int j = 0; j < 20; ++j)
+{
 		t_u	= network["enu"][0].launch(b)
 			+ network["enu"][1].launch(b) 
 			+ network["enu"][2].launch(b);
 
-		t_u = Dmera::eigenshift(t_u);
-		b->update("u", Dmera::svdSolveMinimal(t_u));
-
+		b->update("u", Dmera::svdSolveMinimal(t_u, E));
+    	
+		if (i == 0)
+			of << E + b->es[0] + b->es[1] + b->es[2] + b->es[3] << std::endl;
+}
+for (int j = 0; j < 20; ++j)
+{
 		t_l	= network["enl"][0].launch(b)
 			+ network["enl"][1].launch(b) 
 			+ network["enl"][2].launch(b) 
 			+ network["enl"][3].launch(b);
 
-		t_l = Dmera::eigenshift(t_l);
-		b->update("l", Dmera::svdSolveMinimal(t_l));
-
+		b->update("l", Dmera::svdSolveMinimal(t_l, E));
+}
+for (int j = 0; j < 20; ++j)
+{
 		t_r	= network["enr"][0].launch(b)
 			+ network["enr"][1].launch(b) 
 			+ network["enr"][2].launch(b) 
 			+ network["enr"][3].launch(b);
 
-		t_r = Dmera::eigenshift(t_r);
-		b->update("r", Dmera::svdSolveMinimal(t_r));
-
+		b->update("r", Dmera::svdSolveMinimal(t_r, E));
+}
+		of << E + b->es[1] + b->es[2] + b->es[3] + b->es[4] << std::endl;
 
 		// Ascend eff ham.
 
@@ -389,7 +404,6 @@ void Dmera::VarUpdate()
 				+ network["eha"][2].launch(b)
 				+ network["eha"][3].launch(b);
 		eh[r]	= network["eha"][4].launch(b); 
-
 	}
 
 }
@@ -490,7 +504,7 @@ uni10::UniTensor Dmera::DmSinglet(int type)
 	return T;
 }
 
-uni10::UniTensor Dmera::TwoSiteHam(double j, double delta)
+uni10::UniTensor Dmera::TwoSiteHam(double J, double delta)
 {
 	uni10::Bond b_in(uni10::BD_IN, 2);
 	uni10::Bond b_out(uni10::BD_OUT, 2);
@@ -503,21 +517,20 @@ uni10::UniTensor Dmera::TwoSiteHam(double j, double delta)
 
 	uni10::UniTensor T(RCTYPE, B);
 
-	uni10::Complex M[16];
+	// XXZ Ham.
 
-	for (int i = 0; i < 4; ++i)
-		for (int j = 0; j < 4; ++j)
-		{
-			// TODO: hamiltonian
-			M[4 * j + i] = 1.;
-		}
+	uni10::Real M[16] = 
+		{	delta,	0.,		0.,		0.,
+			0.,		-delta,	2.,		0.,
+			0.,		2.,		-delta,	0.,
+			0.,		0.,		0.,		delta	};
 
-	T.setRawElem(M);
+	T.setRawElem(0.25 * J * M);
 
 	return T;
 }
 
-uni10::UniTensor Dmera::eigenshift(uni10::UniTensor input)
+uni10::UniTensor Dmera::eigenshift(uni10::UniTensor input, double& e)
 {
 /*
 	uni10::Matrix input_m = input.getRawElem();
@@ -545,10 +558,12 @@ uni10::UniTensor Dmera::eigenshift(uni10::UniTensor input)
 	std::vector<uni10::Matrix> m = input.getRawElem().eigh();
 	double max_ev = m[0].max();
 
+	e = max_ev;
+
 	return input + (-1) * max_ev * Dmera::Identity();
 }
 
-uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input)
+uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input, double& E)
 {
 	std::vector<uni10::Matrix> M_svd;
 	int labels[] = {-1, -2, -3, -4};
@@ -561,10 +576,11 @@ uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input)
 	SVD.putTensor("1", T_svd[1]);
 	SVD.putTensorT("2", T_svd[0]);
 
+	E = (-1) * T_svd[2].getRawElem().trace(uni10::CTYPE).real();	
+
 	return (-1) * SVD.launch();
 }
 
 void Dmera::check() const
 {
-	
 }

@@ -7,7 +7,7 @@
 #include "Dmera.h"
 
 const int SITES = 8;
-const int EPOCH = 500;
+const int EPOCH = 10;
 
 int main()
 {
@@ -22,10 +22,17 @@ int main()
 		j.push_back(jdis(re));
 
 	Dmera case1(j, 0.01);
-
-	case1.VarUpdate();
-
+/*
+	for (int i = 0; i < EPOCH; ++i)
+	{
+		std::cout << i + 1 << std::endl;
+		case1.VarUpdate();
+	}
+*/
 	case1.check();
+ 
+
+
 
 	return 0;
 }

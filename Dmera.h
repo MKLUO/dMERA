@@ -3,6 +3,8 @@
 
 #include <string>
 #include <vector>
+#include <map>
+#include <fstream>
 #include <utility>
 
 #include <uni10.hpp>
@@ -33,6 +35,8 @@ class Dmera
 				std::map<std::string, uni10::UniTensor> t;
 				std::array<uni10::UniTensor, 3> dm; // density matrix
 				std::array<uni10::UniTensor, 5> eh; // effective hamiltonian
+				std::array<uni10::UniTensor, 5> ehs; // effective hamiltonian - shift
+				std::array<double, 5> es;
 			private:
 				const int idx;
 		};
@@ -60,8 +64,8 @@ class Dmera
 		static uni10::UniTensor DmSinglet(int);
 		static uni10::UniTensor TwoSiteHam(double, double);
 
-		static uni10::UniTensor eigenshift(uni10::UniTensor);
-		static uni10::UniTensor svdSolveMinimal(uni10::UniTensor);
+		static uni10::UniTensor eigenshift(uni10::UniTensor, double&);
+		static uni10::UniTensor svdSolveMinimal(uni10::UniTensor, double&);
         
 		const int width;
 
@@ -70,6 +74,8 @@ class Dmera
 
 		std::vector<uni10::UniTensor> dm_init;
 		std::vector<uni10::UniTensor> eh_init;
+
+		std::ofstream of;
 };
 
 #endif //ifndef DMERA_H
