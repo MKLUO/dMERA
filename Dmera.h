@@ -11,6 +11,13 @@
 
 const auto RCTYPE = uni10::RTYPE;
 
+const std::string SVD_FNAME("NetworkSheets/SVD");
+const std::string DMS_0_FNAME("NetworkSheets/DMS_0");
+const std::string DMS_1_FNAME("NetworkSheets/DMS_1");
+const std::string PNAME("NetworkSheets/_");
+
+const bool FROM_FILE = true;
+
 class Dmera
 {
 	public:

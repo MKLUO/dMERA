@@ -17,11 +17,6 @@
 
 #include "Dmera.h"
 
-const std::string SVD_FNAME("NetworkSheets/SVD");
-const std::string DMS_0_FNAME("NetworkSheets/DMS_0");
-const std::string DMS_1_FNAME("NetworkSheets/DMS_1");
-const std::string PNAME("NetworkSheets/_");
-
 Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 {                                  
 	// DM & EH init
@@ -106,11 +101,23 @@ void Dmera::BuildNetworkForms()
 	network["enu"].resize(3);
 	network["enr"].resize(4);
 
+	network["dmdi"].resize(5);
+	network["ehai"].resize(5);
+	network["enli"].resize(4);
+	network["enui"].resize(3);
+	network["enri"].resize(4);
+
 	network["dmd"][0] = NetworkForm("DM", 0, 0, 0);
 	network["dmd"][1] = NetworkForm("DM", 1, 0, 1);
 	network["dmd"][2] = NetworkForm("DM", 2, 0, 1);
 	network["dmd"][3] = NetworkForm("DM", 3, 0, 1);
 	network["dmd"][4] = NetworkForm("DM", 4, 0, 2);
+
+	network["dmdi"][0] = NetworkForm("DMI", 0, 0, 0);
+	network["dmdi"][1] = network["dmd"][1];
+	network["dmdi"][2] = network["dmd"][2];
+	network["dmdi"][3] = network["dmd"][3];
+	network["dmdi"][4] = network["dmdi"][0];
 
 	network["eha"][0] = NetworkForm("EH", 0, 0, 0);
 	network["eha"][1] = NetworkForm("EH", 1, 0, 1);
@@ -118,25 +125,47 @@ void Dmera::BuildNetworkForms()
 	network["eha"][3] = NetworkForm("EH", 3, 0, 1);
 	network["eha"][4] = NetworkForm("EH", 4, 0, 2);
 
+	network["ehai"][0] = network["eha"][0];
+	network["ehai"][1] = network["eha"][1];
+	network["ehai"][2] = network["eha"][2];
+	network["ehai"][3] = network["eha"][3];
+	network["ehai"][4] = network["eha"][4];
+
 	network["enl"][0] = NetworkForm("EN", 0, 0, 0);
 	network["enl"][1] = NetworkForm("EN", 1, 0, 1);
 	network["enl"][2] = NetworkForm("EN", 2, 0, 1);
 	network["enl"][3] = NetworkForm("EN", 3, 0, 1);
 
+	network["enli"][0] = NetworkForm("ENI", 0, 0, 0);
+	network["enli"][1] = network["enl"][1];
+	network["enli"][2] = network["enl"][2];
+	network["enli"][3] = network["enl"][3];
+
 	network["enu"][0] = NetworkForm("EN", 1, 1, 1);
 	network["enu"][1] = NetworkForm("EN", 2, 1, 1);
 	network["enu"][2] = NetworkForm("EN", 3, 1, 1);
+
+	network["enui"][0] = network["enu"][0];
+	network["enui"][1] = network["enu"][1];
+	network["enui"][2] = network["enu"][2];
 
 	network["enr"][0] = NetworkForm("EN", 1, 2, 1);
 	network["enr"][1] = NetworkForm("EN", 2, 2, 1);
 	network["enr"][2] = NetworkForm("EN", 3, 2, 1);
 	network["enr"][3] = NetworkForm("EN", 4, 2, 2);
+
+	network["enri"][0] = network["enr"][0];
+	network["enri"][1] = network["enr"][1];
+	network["enri"][2] = network["enr"][2];
+	network["enri"][3] = NetworkForm("ENI", 4, 2, 2);
 }   
 
 Dmera::NetworkForm::NetworkForm() { }
 
 Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 {
+	std::string fname = PNAME + std::string(type) + std::to_string(idx1) + std::to_string(idx2) + std::to_string(idx3);
+
 	// The class 'Nodes' is for constructing networks.
 
 	class Nodes
@@ -197,73 +226,84 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 			int bond = 7;
 	};
 
-	Nodes nodes;
-
-	if (type == "DM")	nodes.append("_", idx1);
-	else				nodes.append("eh" + std::to_string(idx1), idx1);
-
-	if ((type == "EN") && (idx2 == 1))	nodes.append("_", 2);			
-	else								nodes.append("u", 2);
-
-	if ((type == "EN") && (idx2 == 0))	nodes.append("_", 1);			
-	else								nodes.append("l", 1);
-
-	if ((type == "EN") && (idx2 == 2))	nodes.append("_", 3);			
-	else								nodes.append("r", 3);
-
-	nodes.appendT("ut", 2);
-	nodes.appendT("lt", 1);
-	nodes.appendT("rt", 3);
-
-	nodes.appendS("s", 2);
-	nodes.appendST("st", 2);
-
-	if (type == "EH")
+	if (!FROM_FILE)
 	{
-		if (idx3 == 0)	nodes.appendF("_", 0);
-		if (idx3 == 1)	nodes.appendF("_", 1);
-		if (idx3 == 2)	nodes.appendF("_", 4);
-	}
-	else 
-	{
-		if (idx3 == 0)	nodes.appendF("dm" + std::to_string(idx3), 0);
-		if (idx3 == 1)	nodes.appendF("dm" + std::to_string(idx3), 1);
-		if (idx3 == 2)	nodes.appendF("dm" + std::to_string(idx3), 4);
-	}
+		Nodes nodes;
 
-	std::map<std::string, std::array<int, 4>> tensorList = nodes.getList();
+		if (type == "DM")	nodes.append("_", idx1);
+		else				nodes.append("eh" + std::to_string(idx1), idx1);
 
-	std::string fname = PNAME + std::string(type) + std::to_string(idx1) + std::to_string(idx2) + std::to_string(idx3);
-	std::ofstream of(fname);
+		if ((type == "EN") && (idx2 == 1))	nodes.append("_", 2);			
+		else								nodes.append("u", 2);
 
-	std::array<int, 4> bonds_tout;
+		if ((type == "EN") && (idx2 == 0))	nodes.append("_", 1);			
+		else								nodes.append("l", 1);
 
-	for (auto t : tensorList)
-	{
-		std::string name = t.first;
-		std::array<int, 4> bonds = t.second;
+		if ((type == "EN") && (idx2 == 2))	nodes.append("_", 3);			
+		else								nodes.append("r", 3);
 
-		if (name == "_")
+		nodes.appendT("ut", 2);
+		nodes.appendT("lt", 1);
+		nodes.appendT("rt", 3);
+
+		nodes.appendS("s", 2);
+		nodes.appendST("st", 2);
+
+		if (type == "EH")
 		{
-			bonds_tout = bonds;
-			continue;
+			if (idx3 == 0)	nodes.appendF("_", 0);
+			if (idx3 == 1)	nodes.appendF("_", 1);
+			if (idx3 == 2)	nodes.appendF("_", 4);
+		}
+		else 
+		{
+			if (idx3 == 0)	nodes.appendF("dm" + std::to_string(idx3), 0);
+			if (idx3 == 1)	nodes.appendF("dm" + std::to_string(idx3), 1);
+			if (idx3 == 2)	nodes.appendF("dm" + std::to_string(idx3), 4);
 		}
 
-		if (bonds[0] == 0)
-			of << name << "\t:\t\t\t;\t" << bonds[2] << "\t" << bonds[3] << std::endl;
-		else if (bonds[2] == 0)  
-			of << name << "\t:\t" << bonds[0] << "\t" << bonds[1] << "\t;" << std::endl;
-		else
-			of << name << "\t:\t" << bonds[0] << "\t" << bonds[1] << "\t;\t" << bonds[2] << "\t" << bonds[3] << std::endl;
+		std::map<std::string, std::array<int, 4>> tensorList = nodes.getList();
 
-		symbols.push_back(name);
+		std::array<int, 4> bonds_tout;
+
+		std::ofstream of(fname);
+
+		for (auto t : tensorList)
+		{
+			std::string name = t.first;
+			std::array<int, 4> bonds = t.second;
+
+			if (name == "_")
+			{
+				bonds_tout = bonds;
+				continue;
+			}
+
+			if (bonds[0] == 0)
+				of << name << "\t:\t\t\t;\t" << bonds[2] << "\t" << bonds[3] << std::endl;
+			else if (bonds[2] == 0)  
+				of << name << "\t:\t" << bonds[0] << "\t" << bonds[1] << "\t;" << std::endl;
+			else
+				of << name << "\t:\t" << bonds[0] << "\t" << bonds[1] << "\t;\t" << bonds[2] << "\t" << bonds[3] << std::endl;
+
+			symbols.push_back(name);
+		}
+
+		of << "TOUT\t:\t" << bonds_tout[2] << "\t" << bonds_tout[3] << "\t;\t" << bonds_tout[0] << "\t" << bonds_tout[1] << std::endl;
+
+		of.close();
+
+		network = new uni10::Network(fname);
 	}
-
-	of << "TOUT\t:\t" << bonds_tout[2] << "\t" << bonds_tout[3] << "\t;\t" << bonds_tout[0] << "\t" << bonds_tout[1] << std::endl;
-
-	of.close();
-
-	network = new uni10::Network(fname);
+	else
+	{
+		network = new uni10::Network(fname);
+    	symbols = network->get_symbols();
+		std::cout << fname << std::endl;
+		for (auto s : symbols)
+			std::cout << s << " ";
+		std::cout << std::endl;
+	}
 }
 
 uni10::UniTensor Dmera::NetworkForm::launch(Block* b) const
@@ -291,6 +331,10 @@ void Dmera::VarUpdate()
 
 	for (int i = blocks.size() - 1; i >= 0; --i)
 	{
+		for (auto d : dm)
+			std::cout << d.trace();
+		std::cout << "contracted at: " << blocks[i]->get_idx() << std::endl;
+
 		Block* b = blocks[i];
 		const int idx = b->get_idx();
 		const bool boundry = (idx == (dm.size() + 1));
@@ -314,7 +358,10 @@ void Dmera::VarUpdate()
 
 		// Descend den. mat.
 		for (int j = 0; j < 5; ++j)
-			dm[Dmera::index(idx + j - 2, dm.size())] = network["dmd"][j].launch(b);
+			if (i == blocks.size() - 1)
+				dm[Dmera::index(idx + j - 2, dm.size())] = network["dmdi"][j].launch(b);
+			else
+				dm[Dmera::index(idx + j - 2, dm.size())] = network["dmd"][j].launch(b);
 
 	}
 
@@ -351,35 +398,48 @@ void Dmera::VarUpdate()
 		uni10::UniTensor t_l, t_u, t_r;
 		double E; // energy recording
 
-for (int j = 0; j < 20; ++j)
-{
-		t_u	= network["enu"][0].launch(b)
-			+ network["enu"][1].launch(b) 
-			+ network["enu"][2].launch(b);
+		// TODO: update repeat time
+		for (int j = 0; j < 20; ++j)
+		{
+			t_u	= network["enu"][0].launch(b)
+				+ network["enu"][1].launch(b) 
+				+ network["enu"][2].launch(b);
 
-		b->update("u", Dmera::svdSolveMinimal(t_u, E));
-    	
-		if (i == 0)
-			of << E + b->es[0] + b->es[1] + b->es[2] + b->es[3] << std::endl;
-}
-for (int j = 0; j < 20; ++j)
-{
-		t_l	= network["enl"][0].launch(b)
-			+ network["enl"][1].launch(b) 
-			+ network["enl"][2].launch(b) 
-			+ network["enl"][3].launch(b);
+			b->update("u", Dmera::svdSolveMinimal(t_u, E));
 
-		b->update("l", Dmera::svdSolveMinimal(t_l, E));
-}
-for (int j = 0; j < 20; ++j)
-{
-		t_r	= network["enr"][0].launch(b)
-			+ network["enr"][1].launch(b) 
-			+ network["enr"][2].launch(b) 
-			+ network["enr"][3].launch(b);
+			if (i == 0)
+				of << E + b->es[0] + b->es[1] + b->es[2] + b->es[3] << std::endl;
+		}
+		for (int j = 0; j < 20; ++j)
+		{
+			if (i == blocks.size() - 1)
+				t_l	= network["enli"][0].launch(b)
+					+ network["enli"][1].launch(b) 
+					+ network["enli"][2].launch(b) 
+					+ network["enli"][3].launch(b);
+			else
+				t_l	= network["enl"][0].launch(b)
+					+ network["enl"][1].launch(b) 
+					+ network["enl"][2].launch(b) 
+					+ network["enl"][3].launch(b);
 
-		b->update("r", Dmera::svdSolveMinimal(t_r, E));
-}
+			b->update("l", Dmera::svdSolveMinimal(t_l, E));
+		}
+		for (int j = 0; j < 20; ++j)
+		{
+			if (i == blocks.size() - 1)
+				t_r	= network["enri"][0].launch(b)
+					+ network["enri"][1].launch(b) 
+					+ network["enri"][2].launch(b) 
+					+ network["enri"][3].launch(b);
+			else
+				t_r	= network["enr"][0].launch(b)
+					+ network["enr"][1].launch(b) 
+					+ network["enr"][2].launch(b) 
+					+ network["enr"][3].launch(b);
+
+			b->update("r", Dmera::svdSolveMinimal(t_r, E));
+		}
 		of << E + b->es[1] + b->es[2] + b->es[3] + b->es[4] << std::endl;
 
 		// Ascend eff ham.
@@ -401,8 +461,8 @@ for (int j = 0; j < 20; ++j)
 
 		eh[l]	= network["eha"][0].launch(b);
 		eh[c]	= network["eha"][1].launch(b) 
-				+ network["eha"][2].launch(b)
-				+ network["eha"][3].launch(b);
+			+ network["eha"][2].launch(b)
+			+ network["eha"][3].launch(b);
 		eh[r]	= network["eha"][4].launch(b); 
 	}
 
@@ -419,7 +479,6 @@ int Dmera::index(int idx, int size)
 
 uni10::UniTensor Dmera::Random_Unitary()
 {
-	// TODO: seems like some problem creating complex unitary. The randomness also seems weird.
 	uni10::Bond b_in(uni10::BD_IN, 2);
 	uni10::Bond b_out(uni10::BD_OUT, 2);
 
@@ -431,12 +490,7 @@ uni10::UniTensor Dmera::Random_Unitary()
 
 	uni10::UniTensor T(RCTYPE, B);
 
-	std::random_device rd;
-	std::default_random_engine dre(rd());
-	std::uniform_int_distribution<int> unif(1, 50);
-
-	for (int i = 0; i < unif(dre); ++i)
-		T.orthoRand();
+	T.orthoRand(RCTYPE);
 
 	return T;
 }
@@ -445,8 +499,8 @@ uni10::UniTensor Dmera::Singlet()
 {
 
 	uni10::Complex m[] = 
-		{	0.,				1. / sqrt(2.),
-	   		-1. / sqrt(2.),	0., 			};
+	{	0.,				1. / sqrt(2.),
+		-1. / sqrt(2.),	0., 			};
 
 	uni10::Bond b_in(uni10::BD_IN, 2);
 
@@ -520,40 +574,40 @@ uni10::UniTensor Dmera::TwoSiteHam(double J, double delta)
 	// XXZ Ham.
 
 	uni10::Real M[16] = 
-		{	delta,	0.,		0.,		0.,
-			0.,		-delta,	2.,		0.,
-			0.,		2.,		-delta,	0.,
-			0.,		0.,		0.,		delta	};
+	{	delta,	0.,		0.,		0.,
+		0.,		-delta,	2.,		0.,
+		0.,		2.,		-delta,	0.,
+		0.,		0.,		0.,		delta	};
 
-	T.setRawElem(0.25 * J * M);
+	T.setRawElem(M);
 
-	return T;
+	return 0.25 * J * T;
 }
 
 uni10::UniTensor Dmera::eigenshift(uni10::UniTensor input, double& e)
 {
-/*
-	uni10::Matrix input_m = input.getRawElem();
-	double data[16];
+	/*
+	   uni10::Matrix input_m = input.getRawElem();
+	   double data[16];
 
-	for (int i = 0; i < 4; ++i)
-		for (int j = 0; j < 4; ++j)
-			data[4 * i + j] = input_m[4 * i + j];
+	   for (int i = 0; i < 4; ++i)
+	   for (int j = 0; j < 4; ++j)
+	   data[4 * i + j] = input_m[4 * i + j];
 
-	gsl_matrix_view m	= gsl_matrix_view_array(data, 4, 4);
-	gsl_vector *eval	= gsl_vector_alloc(4);
-	gsl_matrix *evec	= gsl_matrix_alloc(4, 4);
+	   gsl_matrix_view m	= gsl_matrix_view_array(data, 4, 4);
+	   gsl_vector *eval	= gsl_vector_alloc(4);
+	   gsl_matrix *evec	= gsl_matrix_alloc(4, 4);
 
-	gsl_eigen_symmv_workspace * w = gsl_eigen_symmv_alloc(4);
-	gsl_eigen_symmv(&m.matrix, eval, evec, w);
-	gsl_eigen_symmv_free(w);
+	   gsl_eigen_symmv_workspace * w = gsl_eigen_symmv_alloc(4);
+	   gsl_eigen_symmv(&m.matrix, eval, evec, w);
+	   gsl_eigen_symmv_free(w);
 
-	gsl_eigen_symmv_sort(eval, evec, GSL_EIGEN_SORT_VAL_DESC);
+	   gsl_eigen_symmv_sort(eval, evec, GSL_EIGEN_SORT_VAL_DESC);
 
-	double eval_0 = gsl_vector_get(eval, 0);
+	   double eval_0 = gsl_vector_get(eval, 0);
 
-	return input + (-1) * eval_0 * Dmera::Identity();	
-*/
+	   return input + (-1) * eval_0 * Dmera::Identity();	
+	 */
 
 	std::vector<uni10::Matrix> m = input.getRawElem().eigh();
 	double max_ev = m[0].max();

@@ -4,5 +4,5 @@
 *.out
 *.log
 *.gp
-NetworkSheets/_*
-_*
+NetworkSheets/_OLD*
+
