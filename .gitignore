@@ -4,5 +4,6 @@
 *.out
 *.log
 *.gp
+_energy
 NetworkSheets/_OLD*
 

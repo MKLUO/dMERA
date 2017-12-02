@@ -18,6 +18,10 @@ const std::string PNAME("NetworkSheets/_");
 
 const bool FROM_FILE = true;
 
+const int SITES = 8;
+const int EPOCH = 1000;
+const int VAR_TIME = 5;
+
 class Dmera
 {
 	public:

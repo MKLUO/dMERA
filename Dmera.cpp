@@ -299,10 +299,6 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 	{
 		network = new uni10::Network(fname);
     	symbols = network->get_symbols();
-		std::cout << fname << std::endl;
-		for (auto s : symbols)
-			std::cout << s << " ";
-		std::cout << std::endl;
 	}
 }
 
@@ -331,9 +327,11 @@ void Dmera::VarUpdate()
 
 	for (int i = blocks.size() - 1; i >= 0; --i)
 	{
+		/*
 		for (auto d : dm)
 			std::cout << d.trace();
 		std::cout << "contracted at: " << blocks[i]->get_idx() << std::endl;
+        */
 
 		Block* b = blocks[i];
 		const int idx = b->get_idx();
@@ -399,7 +397,7 @@ void Dmera::VarUpdate()
 		double E; // energy recording
 
 		// TODO: update repeat time
-		for (int j = 0; j < 20; ++j)
+		for (int j = 0; j < VAR_TIME; ++j)
 		{
 			t_u	= network["enu"][0].launch(b)
 				+ network["enu"][1].launch(b) 
@@ -408,9 +406,9 @@ void Dmera::VarUpdate()
 			b->update("u", Dmera::svdSolveMinimal(t_u, E));
 
 			if (i == 0)
-				of << E + b->es[0] + b->es[1] + b->es[2] + b->es[3] << std::endl;
+				of << E + b->es[1] + b->es[2] + b->es[3] << std::endl;
 		}
-		for (int j = 0; j < 20; ++j)
+		for (int j = 0; j < VAR_TIME; ++j)
 		{
 			if (i == blocks.size() - 1)
 				t_l	= network["enli"][0].launch(b)
@@ -425,7 +423,7 @@ void Dmera::VarUpdate()
 
 			b->update("l", Dmera::svdSolveMinimal(t_l, E));
 		}
-		for (int j = 0; j < 20; ++j)
+		for (int j = 0; j < VAR_TIME; ++j)
 		{
 			if (i == blocks.size() - 1)
 				t_r	= network["enri"][0].launch(b)
@@ -440,7 +438,6 @@ void Dmera::VarUpdate()
 
 			b->update("r", Dmera::svdSolveMinimal(t_r, E));
 		}
-		of << E + b->es[1] + b->es[2] + b->es[3] + b->es[4] << std::endl;
 
 		// Ascend eff ham.
 

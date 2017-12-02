@@ -6,9 +6,6 @@
 
 #include "Dmera.h"
 
-const int SITES = 8;
-const int EPOCH = 1;
-
 int main()
 {
 	
@@ -23,13 +20,13 @@ int main()
 
 	Dmera case1(j, 0.01);
 
-/*8
+
 	for (int i = 0; i < EPOCH; ++i)
 	{
 		std::cout << "EPOCH\t" << i + 1 << std::endl;
 		case1.VarUpdate();
 	}
-*/
+
 	case1.check();
  
 
