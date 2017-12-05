@@ -451,7 +451,6 @@ void Dmera::VarUpdate()
 			b->update("r", Dmera::svdSolveMinimal(t_r, E));
 		}
 		
-		//of << "Block" << i << " " << E + b->es[1] + b->es[2] + b->es[3] + b->es[4] << std::endl;
 		of << "Block" << i << " " << E << std::endl;
 
 		// Ascend eff ham.
@@ -636,11 +635,22 @@ uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input, double& E)
 	input.setLabel(labels);
 	std::vector<uni10::UniTensor> T_svd = input.hosvd(labels, label_groups, 2, M_svd);
 
+	uni10::Matrix MS = T_svd[2].getRawElem();
+
+	for (int i : {0, 5, 10, 15})
+		if (MS(i).real() == 0.) MS(i) = 1.;
+		else MS(i) = double((0. < MS(i).real()) - (MS(i).real() < 0.));
+   
+	uni10::UniTensor TS = T_svd[2];
+	TS.setRawElem(MS);
+
 	uni10::Network SVD(SVD_FNAME);
 	SVD.putTensor("1", T_svd[1]);
+	SVD.putTensor("I", TS);
 	SVD.putTensorT("2", T_svd[0]);
 
-	E = (-1) * T_svd[2].getRawElem().trace(uni10::CTYPE).real();	
+	E = (-1) * (T_svd[2].getRawElem() * MS).trace(uni10::CTYPE).real();	
+	//E = (-1) * T_svd[2].getRawElem().trace(uni10::RTYPE);	
 
 	return (-1) * SVD.launch();
 }

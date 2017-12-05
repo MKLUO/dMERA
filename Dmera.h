@@ -18,11 +18,11 @@ const std::string PNAME("NetworkSheets/_");
 
 const bool FROM_FILE = true;
 
-const double DELTA = 0.01;
+const double DELTA = 0.5;
 
-const int SITES = 8;
-const int EPOCH = 10000;
-const int VAR_TIME = 3;
+const int SITES = 6;
+const int EPOCH = 10;
+const int VAR_TIME = 5;
 
 class Dmera
 {
@@ -34,6 +34,9 @@ class Dmera
 		void VarUpdate();
 
 		void check() const;
+
+		static uni10::UniTensor eigenshift(uni10::UniTensor, double&);
+		static uni10::UniTensor svdSolveMinimal(uni10::UniTensor, double&);
 
 	private:
     	class Block
@@ -76,9 +79,6 @@ class Dmera
 		static uni10::UniTensor Identity();
 		static uni10::UniTensor DmSinglet(int);
 		static uni10::UniTensor TwoSiteHam(double, double);
-
-		static uni10::UniTensor eigenshift(uni10::UniTensor, double&);
-		static uni10::UniTensor svdSolveMinimal(uni10::UniTensor, double&);
         
 		const int width;
 
