@@ -21,7 +21,7 @@ const bool FROM_FILE = true;
 const double DELTA = 0.01;
 
 const int SITES = 8;
-const int EPOCH = 10;
+const int EPOCH = 10000;
 const int VAR_TIME = 3;
 
 class Dmera
@@ -87,6 +87,8 @@ class Dmera
 
 		std::vector<uni10::UniTensor> dm_init;
 		std::vector<uni10::UniTensor> eh_init;
+
+		std::array<double, SITES> es;
 
 		std::ofstream of;
 };

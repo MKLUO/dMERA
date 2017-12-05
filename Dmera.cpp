@@ -38,7 +38,6 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 			if (js[i] > js[idx])
 				idx = i;
 
-		std::cout << idx << std::endl;
 		blocks.push_back(new Block(idx));
 
 		int left	= Dmera::index(idx - 1, js.size());
@@ -375,6 +374,12 @@ void Dmera::VarUpdate()
 
 	std::vector<uni10::UniTensor> eh = eh_init;
 
+
+	// TODO: test: shift only at beginning
+	for (int i = 0; i < SITES; ++i)
+		eh[i] = Dmera::eigenshift(eh[i], es[i]);
+		
+
 	for (int i = 0; i < blocks.size(); ++i)
 	{
 		Block* b = blocks[i];
@@ -386,7 +391,9 @@ void Dmera::VarUpdate()
 		{
 			b->eh[j] = eh[Dmera::index(idx + j - 2, eh.size())];
 
-			b->ehs[j] = Dmera::eigenshift(b->eh[j], b->es[j]);
+			// TODO: shift at every layer or not?
+			//b->ehs[j] = Dmera::eigenshift(b->eh[j], b->es[j]);
+			b->ehs[j] = b->eh[j];
 		}
 
 
@@ -444,7 +451,8 @@ void Dmera::VarUpdate()
 			b->update("r", Dmera::svdSolveMinimal(t_r, E));
 		}
 		
-		of << "Block" << i << " " << E + b->es[1] + b->es[2] + b->es[3] + b->es[4] << std::endl;
+		//of << "Block" << i << " " << E + b->es[1] + b->es[2] + b->es[3] + b->es[4] << std::endl;
+		of << "Block" << i << " " << E << std::endl;
 
 		// Ascend eff ham.
 

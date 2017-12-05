@@ -20,7 +20,7 @@ int main()
 */
 
 	//std::vector<double> j(SITES, 1.0);
-	std::vector<double> j = {1., 1., 4., 1., 3., 1., 2., 1.};
+	std::vector<double> j = {0.1, 0.1, 4.0, 0.1, 3.0, 0.1, 2.0, 0.1};
 
 
 	Dmera case1(j, DELTA);
