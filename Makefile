@@ -6,7 +6,7 @@ DBG			= -g
 SOURCES		= Dmera.cpp
 OBJECTS		= $(SOURCES:.cpp=.o)
 
-all: main $(SOURCES) test
+all: clean main $(SOURCES) test
 
 main: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) main.cpp $(LIBS) $(INCLUDES) -o main.exe $(DBG)
@@ -17,5 +17,5 @@ test: $(OBJECTS)
 .cpp.o:
 	$(CC) $(CFLAGS) $< $(LIBS) $(INCLUDES) -c -o $@ $(DBG)
 
-clear:
+clean:
 	rm *.o
