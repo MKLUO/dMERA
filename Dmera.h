@@ -18,9 +18,11 @@ const std::string PNAME("NetworkSheets/_");
 
 const bool FROM_FILE = true;
 
+const double DELTA = 0.01;
+
 const int SITES = 8;
-const int EPOCH = 1000;
-const int VAR_TIME = 5;
+const int EPOCH = 10;
+const int VAR_TIME = 3;
 
 class Dmera
 {
@@ -88,5 +90,8 @@ class Dmera
 
 		std::ofstream of;
 };
+
+// for debug
+void print(const uni10::UniTensor&);
 
 #endif //ifndef DMERA_H

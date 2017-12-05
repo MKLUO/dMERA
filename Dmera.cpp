@@ -38,6 +38,7 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 			if (js[i] > js[idx])
 				idx = i;
 
+		std::cout << idx << std::endl;
 		blocks.push_back(new Block(idx));
 
 		int left	= Dmera::index(idx - 1, js.size());
@@ -86,11 +87,17 @@ uni10::UniTensor Dmera::Block::tensor(std::string name) const
 	else if	(name == "dm1") return dm[1];
 	else if	(name == "dm2") return dm[2];
 
-	else if	(name == "eh0") return ehs[0];
-	else if	(name == "eh1") return ehs[1];
-	else if	(name == "eh2") return ehs[2];
-	else if	(name == "eh3") return ehs[3];
-	else if	(name == "eh4") return ehs[4];
+	else if	(name == "eh0") return eh[0];
+	else if	(name == "eh1") return eh[1];
+	else if	(name == "eh2") return eh[2];
+	else if	(name == "eh3") return eh[3];
+	else if	(name == "eh4") return eh[4];
+	
+	else if	(name == "ehs0") return ehs[0];
+	else if	(name == "ehs1") return ehs[1];
+	else if	(name == "ehs2") return ehs[2];
+	else if	(name == "ehs3") return ehs[3];
+	else if	(name == "ehs4") return ehs[4];
 }
 
 void Dmera::BuildNetworkForms()
@@ -230,8 +237,9 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 	{
 		Nodes nodes;
 
-		if (type == "DM")	nodes.append("_", idx1);
-		else				nodes.append("eh" + std::to_string(idx1), idx1);
+		if (type == "DM")		nodes.append("_", idx1);
+		else if (type == "EH")	nodes.append("eh" + std::to_string(idx1), idx1);
+		else					nodes.append("ehs" + std::to_string(idx1), idx1);
 
 		if ((type == "EN") && (idx2 == 1))	nodes.append("_", 2);			
 		else								nodes.append("u", 2);
@@ -396,7 +404,6 @@ void Dmera::VarUpdate()
 		uni10::UniTensor t_l, t_u, t_r;
 		double E; // energy recording
 
-		// TODO: update repeat time
 		for (int j = 0; j < VAR_TIME; ++j)
 		{
 			t_u	= network["enu"][0].launch(b)
@@ -404,10 +411,8 @@ void Dmera::VarUpdate()
 				+ network["enu"][2].launch(b);
 
 			b->update("u", Dmera::svdSolveMinimal(t_u, E));
-
-			if (i == 0)
-				of << E + b->es[1] + b->es[2] + b->es[3] << std::endl;
 		}
+		of << std::endl;
 		for (int j = 0; j < VAR_TIME; ++j)
 		{
 			if (i == blocks.size() - 1)
@@ -438,6 +443,8 @@ void Dmera::VarUpdate()
 
 			b->update("r", Dmera::svdSolveMinimal(t_r, E));
 		}
+		
+		of << "Block" << i << " " << E + b->es[1] + b->es[2] + b->es[3] + b->es[4] << std::endl;
 
 		// Ascend eff ham.
 
@@ -609,8 +616,6 @@ uni10::UniTensor Dmera::eigenshift(uni10::UniTensor input, double& e)
 	std::vector<uni10::Matrix> m = input.getRawElem().eigh();
 	double max_ev = m[0].max();
 
-	e = max_ev;
-
 	return input + (-1) * max_ev * Dmera::Identity();
 }
 
@@ -635,3 +640,5 @@ uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input, double& E)
 void Dmera::check() const
 {
 }
+
+void print(const uni10::UniTensor& t) { std::cout << t; }
