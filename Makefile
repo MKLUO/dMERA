@@ -1,12 +1,13 @@
 CC			= g++
-CFLAGS		= -std=c++11
+CFLAGS		= -std=c++11 -MMD -MP
 LIBS		= -luni10 
 INCLUDES	= -I/usr/local/uni10/include
 DBG			= -g
 SOURCES		= Dmera.cpp
 OBJECTS		= $(SOURCES:.cpp=.o)
+DEPS		= $(SOURCES:.cpp=.d) 
 
-all: clean main $(SOURCES) test
+all: main test $(SOURCES)
 
 main: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) main.cpp $(LIBS) $(INCLUDES) -o main.exe $(DBG)
@@ -14,8 +15,10 @@ main: $(OBJECTS)
 test: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) test.cpp $(LIBS) $(INCLUDES) -o test.exe $(DBG)
 
-.cpp.o:
+%.o: %.cpp %.h
 	$(CC) $(CFLAGS) $< $(LIBS) $(INCLUDES) -c -o $@ $(DBG)
 
 clean:
-	rm *.o
+	rm *.o *.d
+
+-include $(DEPS)

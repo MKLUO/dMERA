@@ -20,8 +20,8 @@ const bool FROM_FILE = true;
 
 const double DELTA = 0.5;
 
-const int SITES = 16;
-const int EPOCH = 10;
+const int SITES = 12;
+const int EPOCH = 50;
 const int VAR_TIME = 5;
 
 class Dmera
