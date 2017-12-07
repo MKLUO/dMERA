@@ -2,24 +2,28 @@
 #include <fstream>
 #include <vector>
 
+#include <cmath>
 #include <random>
 
 #include "Dmera.h"
 
+const int SITES = 50;
+
+const double DELTA = 0.0;
+const double DISORDER = 10.0;
+
+const int EPOCH = 20;
+
 int main()
 {
-	// TODO: disorder J distribution	
-	std::uniform_real_distribution<double> jdis(0., 10.);
+	std::uniform_real_distribution<double> jdis(0., 1.);
 	std::random_device rd;
 	std::default_random_engine re = std::default_random_engine(rd());
 
 	std::vector<double> j;
 
     for (int i = 0; i < SITES; ++i)
-		j.push_back(jdis(re));
-
-
-//	j = {0.1, 0.1, 4.0, 0.1, 3.0, 0.1, 5.0, 0.1};
+		j.push_back(std::pow(jdis(re), DISORDER));
 
 
 	Dmera case1(j, DELTA);
@@ -31,7 +35,14 @@ int main()
 		case1.VarUpdate();
 	}
 
-	case1.check();
+	Dmera case2(j, DELTA);
+
+
+	for (int i = 0; i < EPOCH; ++i)
+	{
+		std::cout << "EPOCH\t" << i + 1 << std::endl;
+		case2.VarUpdate();
+	}
  
 
 

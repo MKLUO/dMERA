@@ -17,7 +17,7 @@
 
 #include "Dmera.h"
 
-Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
+Dmera::Dmera(std::vector<double> js, double delta): width(js.size()) 
 {                                  
 	// DM & EH init
 
@@ -28,6 +28,8 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 	eh_init.resize(width);
 	for (int i = 0; i < width; ++i)
 		eh_init[i] = TwoSiteHam(js[i], delta);
+
+	es.resize(width);
 
 	//iteratively contract nodes
 
@@ -172,141 +174,8 @@ Dmera::NetworkForm::NetworkForm(std::string type, int idx1, int idx2, int idx3)
 {
 	std::string fname = PNAME + std::string(type) + std::to_string(idx1) + std::to_string(idx2) + std::to_string(idx3);
 
-	// The class 'Nodes' is for constructing networks.
-
-	class Nodes
-	{          
-		public:
-			void append(std::string name, int idx)
-			{
-				TensorList[name] = {up[idx], up[idx + 1], bond, bond + 1};
-				up[idx]		= bond;
-				up[idx + 1]	= bond + 1;
-				bond += 2;
-			}
-			void appendT(std::string name, int idx)
-			{
-				TensorList[name] = {bond, bond + 1, down[idx], down[idx + 1]};
-				down[idx]		= bond;
-				down[idx + 1]	= bond + 1;
-				bond += 2;
-			}           
-			void appendS(std::string name, int idx)
-			{
-				TensorList[name] = {up[idx], up[idx + 1], 0, 0};
-				up[idx]		= 0;
-				up[idx + 1]	= 0;
-			}            
-			void appendST(std::string name, int idx)
-			{
-				TensorList[name] = {0, 0, down[idx], down[idx + 1]};
-				down[idx]		= 0;
-				down[idx + 1]	= 0;
-			}
-			void appendF(std::string name, int idx)
-			{
-				int idx_next;
-				switch (idx)
-				{
-					case (0): idx_next = 1; break;
-					case (1): idx_next = 4; break;
-					case (4): idx_next = 5; break;
-				}
-				TensorList[name] = {up[idx], up[idx_next], down[idx], down[idx_next]};
-
-				switch (idx)
-				{
-					case (0): TensorList["r"][3] = TensorList["rt"][1]; break;
-					case (1): break;
-					case (4): TensorList["l"][2] = TensorList["lt"][0]; break;
-				}
-			}
-
-			std::map<std::string, std::array<int, 4>> getList() const { return TensorList; }
-
-		private:
-			std::map<std::string, std::array<int, 4>> TensorList;
-
-			std::array<int, 6> up	{{1, 2, 3, 4, 5, 6}};
-			std::array<int, 6> down	{{1, 2, 3, 4, 5, 6}};
-			int bond = 7;
-	};
-
-	if (!FROM_FILE)
-	{
-		Nodes nodes;
-
-		if (type == "DM")		nodes.append("_", idx1);
-		else if (type == "EH")	nodes.append("eh" + std::to_string(idx1), idx1);
-		else					nodes.append("ehs" + std::to_string(idx1), idx1);
-
-		if ((type == "EN") && (idx2 == 1))	nodes.append("_", 2);			
-		else								nodes.append("u", 2);
-
-		if ((type == "EN") && (idx2 == 0))	nodes.append("_", 1);			
-		else								nodes.append("l", 1);
-
-		if ((type == "EN") && (idx2 == 2))	nodes.append("_", 3);			
-		else								nodes.append("r", 3);
-
-		nodes.appendT("ut", 2);
-		nodes.appendT("lt", 1);
-		nodes.appendT("rt", 3);
-
-		nodes.appendS("s", 2);
-		nodes.appendST("st", 2);
-
-		if (type == "EH")
-		{
-			if (idx3 == 0)	nodes.appendF("_", 0);
-			if (idx3 == 1)	nodes.appendF("_", 1);
-			if (idx3 == 2)	nodes.appendF("_", 4);
-		}
-		else 
-		{
-			if (idx3 == 0)	nodes.appendF("dm" + std::to_string(idx3), 0);
-			if (idx3 == 1)	nodes.appendF("dm" + std::to_string(idx3), 1);
-			if (idx3 == 2)	nodes.appendF("dm" + std::to_string(idx3), 4);
-		}
-
-		std::map<std::string, std::array<int, 4>> tensorList = nodes.getList();
-
-		std::array<int, 4> bonds_tout;
-
-		std::ofstream of(fname);
-
-		for (auto t : tensorList)
-		{
-			std::string name = t.first;
-			std::array<int, 4> bonds = t.second;
-
-			if (name == "_")
-			{
-				bonds_tout = bonds;
-				continue;
-			}
-
-			if (bonds[0] == 0)
-				of << name << "\t:\t\t\t;\t" << bonds[2] << "\t" << bonds[3] << std::endl;
-			else if (bonds[2] == 0)  
-				of << name << "\t:\t" << bonds[0] << "\t" << bonds[1] << "\t;" << std::endl;
-			else
-				of << name << "\t:\t" << bonds[0] << "\t" << bonds[1] << "\t;\t" << bonds[2] << "\t" << bonds[3] << std::endl;
-
-			symbols.push_back(name);
-		}
-
-		of << "TOUT\t:\t" << bonds_tout[2] << "\t" << bonds_tout[3] << "\t;\t" << bonds_tout[0] << "\t" << bonds_tout[1] << std::endl;
-
-		of.close();
-
-		network = new uni10::Network(fname);
-	}
-	else
-	{
-		network = new uni10::Network(fname);
-    	symbols = network->get_symbols();
-	}
+	network = new uni10::Network(fname);
+    symbols = network->get_symbols();
 }
 
 uni10::UniTensor Dmera::NetworkForm::launch(Block* b) const
@@ -376,7 +245,7 @@ void Dmera::VarUpdate()
 
 
 	// TODO: test: shift only at beginning
-	for (int i = 0; i < SITES; ++i)
+	for (int i = 0; i < width; ++i)
 		eh[i] = Dmera::eigenshift(eh[i], es[i]);
 		
 
@@ -419,7 +288,6 @@ void Dmera::VarUpdate()
 
 			b->update("u", Dmera::svdSolveMinimal(t_u, E));
 		}
-		of << std::endl;
 		for (int j = 0; j < VAR_TIME; ++j)
 		{
 			if (i == blocks.size() - 1)
@@ -451,8 +319,6 @@ void Dmera::VarUpdate()
 			b->update("r", Dmera::svdSolveMinimal(t_r, E));
 		}
 		
-		of << "Block" << i << " " << E << std::endl;
-
 		// Ascend eff ham.
 
 		int l, c, r;
@@ -477,6 +343,23 @@ void Dmera::VarUpdate()
 		eh[r]	= network["eha"][4].launch(b); 
 	}
 
+	double E = 0;
+
+	uni10::Network MUL(MUL_FNAME);
+
+	for (int i : {0, 1})
+	{
+   		MUL.putTensor("1", eh[i]);
+		MUL.putTensor("2", dm_init[i]);
+
+		uni10::UniTensor t = MUL.launch();
+		E += t.trace().real();
+	}
+	for (double ess : es)
+		E += ess;
+
+	of << E << std::endl;
+	std::cout << E << std::endl;
 }
 
 double Dmera::effective_j(double j, double j_l, double j_r, double delta) { return j_l * j_r / j / (1. + delta); }

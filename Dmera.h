@@ -12,16 +12,13 @@
 const auto RCTYPE = uni10::RTYPE;
 
 const std::string SVD_FNAME("NetworkSheets/SVD");
+const std::string MUL_FNAME("NetworkSheets/MUL");
 const std::string DMS_0_FNAME("NetworkSheets/DMS_0");
 const std::string DMS_1_FNAME("NetworkSheets/DMS_1");
-const std::string PNAME("NetworkSheets/_");
+const std::string PNAME("NetworkSheets/");
 
 const bool FROM_FILE = true;
 
-const double DELTA = 0.5;
-
-const int SITES = 12;
-const int EPOCH = 50;
 const int VAR_TIME = 5;
 
 class Dmera
@@ -88,7 +85,7 @@ class Dmera
 		std::vector<uni10::UniTensor> dm_init;
 		std::vector<uni10::UniTensor> eh_init;
 
-		std::array<double, SITES> es;
+		std::vector<double> es;
 
 		std::ofstream of;
 };
