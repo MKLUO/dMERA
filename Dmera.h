@@ -31,6 +31,8 @@ class Dmera
 
 		void VarUpdate();
 
+		double AverageEntropy(int) const;
+
 		void check() const;
 
 		static uni10::UniTensor eigenshift(uni10::UniTensor, double&);
@@ -111,10 +113,11 @@ class Dmera
 			{
 				typedef struct tensorInfo
 				{
+					tensorInfo(int, std::vector<int>, std::vector<int>, bool);
 					int index;
 					std::vector<int> inLegs, outLegs;
 					bool transpose;
-				} TensorInfo;
+				} tensorInfo;
 
 				public:
 					UniNetworkAgent(int);
@@ -124,23 +127,28 @@ class Dmera
 					void disjoint(int);
 					int newLeg();
 
+					uni10::UniTensor launch();
+
 				private:
 					std::vector<int> upperLeg, lowerLeg;
 					std::vector<bool> disjointed;
 					std::vector<uni10::UniTensor> tensorDatas;
-					std::vector<TensorInfo> tensorInfos;
+					std::vector<tensorInfo> tensorInfos;
+					std::vector<std::pair<int, int>> legPair;
 
 					int totalLegs;
 			};
 
 			public:
 				Network(int);
-				void putTensor(int, int, std::string);
+				void putTensor(int, uni10::UniTensor, std::string);
 				void coarse(int);
 
 				void causalCone(int);
 				void causalConeH(int);
 				void resetFlag();
+
+				double Entropy(int, int);
 
 				void printNetwork();
 
