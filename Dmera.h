@@ -141,6 +141,7 @@ class Dmera
 
 			public:
 				Network(int);
+				~Network();
 				void putTensor(int, uni10::UniTensor, std::string);
 				void coarse(int);
 

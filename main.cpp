@@ -7,10 +7,10 @@
 
 #include "Dmera.h"
 
-const int SITES = 10;
+const int SITES = 20;
 
 const double DELTA = 0.0;
-const double DISORDER = 5.0;
+const double DISORDER = 1.0;
 
 const int EPOCH = 20;
 
@@ -25,7 +25,7 @@ int main()
     for (int i = 0; i < SITES; ++i)
 		j.push_back(std::pow(jdis(re), DISORDER));
 
-	j = {1, 2, 3, 1, 12, 3, 2, 5, 7, 9};
+//	j = {1, 2, 3, 1, 12, 3, 2, 5, 7, 9};
 
 	Dmera case1(j, DELTA);
 
@@ -37,7 +37,7 @@ int main()
 		case1.VarUpdate();
 	}
 
-	for (int i = 1; i < SITES/2 + 1; ++i)
+	for (int i = 1; i < SITES/2; ++i)
 		std::cout << "\nEntropy of length " << i << " : " << case1.AverageEntropy(i);
 
 	std::cout << std::endl;

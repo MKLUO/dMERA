@@ -237,6 +237,12 @@ Dmera::Network::Network(int size_)
 	porth.resize(size_);
 }
 
+Dmera::Network::~Network()
+{
+	for (auto t : tensors)
+		delete(t);
+}
+
 Dmera::Network::node::node(int pos_)
 {
 	pos = pos_;
@@ -253,21 +259,15 @@ Dmera::Network::Tensor::Tensor(int lPos_, int rPos_, std::string type_, uni10::U
 
 	lParent = 0;
 	rParent = 0;
-	lChild = 0;
-	rChild = 0;
 
 	flag = false;
 }
 
 void Dmera::Network::Tensor::setLParent(Tensor* T) { lParent = T; }
 void Dmera::Network::Tensor::setRParent(Tensor* T) { rParent = T; }
-void Dmera::Network::Tensor::setLChild (Tensor* T) { lChild  = T; }
-void Dmera::Network::Tensor::setRChild (Tensor* T) { rChild  = T; }
 
 Dmera::Network::Tensor* Dmera::Network::Tensor::getLParent() { return lParent; }
 Dmera::Network::Tensor* Dmera::Network::Tensor::getRParent() { return rParent; }
-Dmera::Network::Tensor* Dmera::Network::Tensor::getLChild()  { return lChild;  }
-Dmera::Network::Tensor* Dmera::Network::Tensor::getRChild()  { return rChild;  }
 
 void Dmera::Network::putTensor(int idx, uni10::UniTensor t, std::string type)
 {
@@ -301,9 +301,6 @@ void Dmera::Network::putTensor(int idx, uni10::UniTensor t, std::string type)
 	}
 
 	if (porth[pos1] == 0) porth[pos1] = NT;
-
-	NT->setLChild(nodes[idx1].T);
-	NT->setRChild(nodes[idx2].T);
 
 	int d1, d2;
 
@@ -568,14 +565,17 @@ double Dmera::Network::Entropy(int pos1, int pos2)
 		else				una.putUnitaries(t->lPos, t->rPos, t->data); 
 	}
 
-	uni10::Block result = una.launch().getRawElem();
+	uni10::Matrix result = una.launch().getRawElem();
 
 	double E = 0.;
 
-	for (int i = 0; i < result.row(); ++i)
+	int rows = result.row();
+//    std::cout << result;     
+
+	for (int i = 0; i < rows; ++i)
 	{   
-		uni10::Real e = result.at(uni10::CTYPE, i, i).real();
-		E += - e * std::log(e) / log(2);
+		uni10::Real e = result.at(uni10::CTYPE, i * rows + i).real();
+		if (e != 0.) E += - e * std::log(e) / log(2);
 	}
 
 //	std::cout << result;										 
@@ -591,7 +591,7 @@ double Dmera::AverageEntropy(int length) const
 		int pos2 = index(pos + length, width);
 		E += FN->Entropy(pos1, pos2);
 	}
-	return E / double(width);
+	return 0.5 * E / double(width);
 }
 
 void Dmera::VarUpdate()
@@ -930,12 +930,7 @@ uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input, double& E)
 
 void Dmera::check() const
 {
-	FN->causalConeH(2);
-	FN->causalConeH(8);
-
 	FN->printNetwork();
-
-	std::cout << "\nEntropy: " << AverageEntropy(2) << std::endl;
 }
 
 void print(const uni10::UniTensor& t) { std::cout << t; }
