@@ -16,6 +16,7 @@ const std::string MUL_FNAME("NetworkSheets/MUL");
 const std::string DMS_0_FNAME("NetworkSheets/DMS_0");
 const std::string DMS_1_FNAME("NetworkSheets/DMS_1");
 const std::string PNAME("NetworkSheets/");
+const std::string TEMP_FNAME("NetworkSheets/_TEMP");
 
 const bool FROM_FILE = true;
 
@@ -70,7 +71,7 @@ class Dmera
 			class Tensor
 			{
 				public:
-					Tensor(int, int, int, std::string);
+					Tensor(int, int, std::string, uni10::UniTensor);
 					Tensor* getLParent();
 					Tensor* getRParent();
 					Tensor* getLChild();
@@ -81,15 +82,19 @@ class Dmera
 					void setLChild(Tensor*);
 					void setRChild(Tensor*);
 
+					void unsetFlag();
+					bool flaged();
+					void flagSelfAndParents();
+
 					int lPos, rPos, depth;
 
-				private:
+					uni10::UniTensor data;
+
 					Tensor* lParent;
 					Tensor* rParent;
 					Tensor* lChild;
 					Tensor* rChild;
 
-					int i; // i-th block in blocks
 					std::string type;
 
 					bool flag;
@@ -102,17 +107,49 @@ class Dmera
 				std::string lr;
 			} node;
 
+			class UniNetworkAgent
+			{
+				typedef struct tensorInfo
+				{
+					int index;
+					std::vector<int> inLegs, outLegs;
+					bool transpose;
+				} TensorInfo;
+
+				public:
+					UniNetworkAgent(int);
+					void setOperator(int, uni10::UniTensor);
+					void putUnitaries(int, int, uni10::UniTensor);
+					void putSinglets(int, int);
+					void disjoint(int);
+					int newLeg();
+
+				private:
+					std::vector<int> upperLeg, lowerLeg;
+					std::vector<bool> disjointed;
+					std::vector<uni10::UniTensor> tensorDatas;
+					std::vector<TensorInfo> tensorInfos;
+
+					int totalLegs;
+			};
+
 			public:
 				Network(int);
 				void putTensor(int, int, std::string);
 				void coarse(int);
 
-				void printNetwork(bool);
+				void causalCone(int);
+				void causalConeH(int);
+				void resetFlag();
+
+				void printNetwork();
 
 			private:
 				int size, maxDepth;
 				std::vector<node> nodes;
 				std::vector<Tensor*> tensors;
+				std::vector<Tensor*> port;
+				std::vector<Tensor*> porth;
 		};
 
 		void BuildNetworkForms();

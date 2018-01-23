@@ -7,7 +7,7 @@
 
 #include "Dmera.h"
 
-const int SITES = 10;
+const int SITES = 40;
 
 const double DELTA = 0.0;
 const double DISORDER = 5.0;
@@ -28,6 +28,7 @@ int main()
 
 	Dmera case1(j, DELTA);
 
+	case1.check();
 /*
 	for (int i = 0; i < EPOCH; ++i)
 	{

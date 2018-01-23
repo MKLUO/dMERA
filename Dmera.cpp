@@ -212,25 +212,27 @@ void Dmera::BuildFullNetwork()
 	{
 		auto b = blocks[i];
 	  	int idx = b->get_idx();
-		FN->putTensor(idx		, i, "u");
-		FN->putTensor(idx - 1	, i, "l");
-		FN->putTensor(idx + 1 	, i, "r");
-		FN->putTensor(idx	 	, i, "s");
+		FN->putTensor(idx		, blocks[i]->tensor("u"), "u");
+		FN->putTensor(idx - 1	, blocks[i]->tensor("l"), "l");
+		FN->putTensor(idx + 1 	, blocks[i]->tensor("r"), "r");
+		FN->putTensor(idx	 	, blocks[i]->tensor("s"), "s");
 
 		FN->coarse(idx);
 	}		
 
-	FN->putTensor(0, 0, "s");
-
-	FN->printNetwork(true);
+	FN->putTensor(0, blocks[0]->tensor("s"), "s");
 }
 
 Dmera::Network::Network(int size_)
 {
 	size = size_;	
 	maxDepth = 0;
+
 	for (int i = 0; i < size_; ++i)
 		nodes.push_back(node(i));
+
+	port.resize(size_);
+	porth.resize(size_);
 }
 
 Dmera::Network::node::node(int pos_)
@@ -240,12 +242,12 @@ Dmera::Network::node::node(int pos_)
 	lr = "";
 }
 
-Dmera::Network::Tensor::Tensor(int lPos_, int rPos_, int i_, std::string type_)
+Dmera::Network::Tensor::Tensor(int lPos_, int rPos_, std::string type_, uni10::UniTensor data_)
 {
 	lPos = lPos_;
 	rPos = rPos_;
-	i  = i_;
 	type = type_;
+	data = data_;
 
 	lParent = 0;
 	rParent = 0;
@@ -265,12 +267,15 @@ Dmera::Network::Tensor* Dmera::Network::Tensor::getRParent() { return rParent; }
 Dmera::Network::Tensor* Dmera::Network::Tensor::getLChild()  { return lChild;  }
 Dmera::Network::Tensor* Dmera::Network::Tensor::getRChild()  { return rChild;  }
 
-void Dmera::Network::putTensor(int idx, int i, std::string type)
+void Dmera::Network::putTensor(int idx, uni10::UniTensor t, std::string type)
 {
 	int idx1 = Dmera::index(idx    , nodes.size());
 	int idx2 = Dmera::index(idx + 1, nodes.size());
 
-	Tensor* NT = new Tensor(nodes[idx1].pos, nodes[idx2].pos, i, type);
+	int pos1 = nodes[idx1].pos;
+	int pos2 = nodes[idx2].pos;
+
+	Tensor* NT = new Tensor(pos1, pos2, type, t);
 	tensors.push_back(NT);
 
 	if (nodes[idx1].T != 0)
@@ -279,6 +284,8 @@ void Dmera::Network::putTensor(int idx, int i, std::string type)
 			nodes[idx1].T->setLParent(NT);
 		else
 		    nodes[idx1].T->setRParent(NT);
+	} else {
+     	port[pos1] = NT;
 	}
 		
 	if (nodes[idx2].T != 0)
@@ -287,7 +294,11 @@ void Dmera::Network::putTensor(int idx, int i, std::string type)
 			nodes[idx2].T->setLParent(NT);
 		else
 			nodes[idx2].T->setRParent(NT);
+	} else {
+     	port[pos2] = NT;
 	}
+
+	if (porth[pos1] == 0) porth[pos1] = NT;
 
 	NT->setLChild(nodes[idx1].T);
 	NT->setRChild(nodes[idx2].T);
@@ -323,7 +334,44 @@ void Dmera::Network::coarse(int idx)
 	}
 }
 
-void Dmera::Network::printNetwork(bool flagOnly)
+void Dmera::Network::resetFlag()
+{
+   for (auto t : tensors) t->unsetFlag();
+}
+
+void Dmera::Network::causalCone(int i)
+{
+	 Tensor* t = port[i];
+	 t->flagSelfAndParents();
+}
+
+void Dmera::Network::causalConeH(int i)
+{
+	 Tensor* t = porth[i];
+	 t->flagSelfAndParents();
+}
+
+bool Dmera::Network::Tensor::flaged() 
+{	
+	return flag;
+}
+
+void Dmera::Network::Tensor::unsetFlag()
+{
+	flag = false;
+}
+
+void Dmera::Network::Tensor::flagSelfAndParents()
+{
+	flag = true;
+	if (type != "s")
+	{
+		lParent->flagSelfAndParents();
+		rParent->flagSelfAndParents();
+	}	
+}
+
+void Dmera::Network::printNetwork()
 {
 	std::string graph[size][maxDepth];
     for (int i = 0; i < size; ++i)
@@ -334,23 +382,36 @@ void Dmera::Network::printNetwork(bool flagOnly)
 		std::cout << " " << i << " ";
 	std::cout << std::endl;
 
+	std::string left, right, bar;
 	for (auto t : tensors)
 	{
+		if (!t->flaged())
+		{
+			left	= " └─";
+			right	= "─┘ ";
+			bar		= "───";
+
+		} else {
+			left	= " ╚═";
+			right	= "═╝ ";
+			bar		= "═══";
+		}
+
 		int l = t->lPos;	
 		int r = t->rPos;
 		int d = t->depth - 1;
 
 		if (l > r)
 		{
-			for (int i = 0; i < r; ++i)	    	graph[i][d] = "───";
-			for (int i = l + 1; i < size; ++i)	graph[i][d] = "───";
+			for (int i = 0; i < r; ++i)	    	graph[i][d] = bar;
+			for (int i = l + 1; i < size; ++i)	graph[i][d] = bar;
 
 		} else {
-         	for (int i = l + 1; i < r; ++i)		graph[i][d] = "───"; 
+         	for (int i = l + 1; i < r; ++i)		graph[i][d] = bar; 
 		}
 
-		graph[l][d] = " └─";
-		graph[r][d] = "─┘ ";
+		graph[l][d] = left;
+		graph[r][d] = right;
 	}
 
     for (int j = 0; j < maxDepth; ++j)
@@ -362,17 +423,157 @@ void Dmera::Network::printNetwork(bool flagOnly)
 	}
 }
 
-    /*
-double Dmera::TwoPC(int idx1, int idx2)
+Dmera::Network::UniNetworkAgent::UniNetworkAgent(int size_)
 {
-	NB.casualCone(idx1);
-	NB.casualCone(idx2);
-	double ev = NB.launch(idx, t);
-	NB.reset();
-
-	return ev;
+	for (int i = 0; i < size_; ++i)
+	{
+		upperLeg.push_back(i);
+		lowerLeg.push_back(i);
+		disjointed.push_back(false);
+	}
+	totalLegs = size_;
 }
-      */
+
+Dmera::Network::UniNetworkAgent::TensorInfo::TensorInfo(int index_, std::vector<int> inLegs_, std::vector<int> outLegs_, bool transpose_):
+	index(index_),
+	inLegs(inLegs_),
+	outLegs(outLegs_),
+	transpose(transpose_) {}
+
+
+int Dmera::Network::UniNetworkAgent::newLeg()
+{
+	++totalLegs;
+	return totalLegs - 1;
+}
+
+void Dmera::Network::UniNetworkAgent::setOperator(int pos, uni10::UniTensor t)
+{
+	if (disjointed[pos]) return;
+
+	lowerLeg[pos] = newLeg();
+	tensorInfos.puah_back(TensorInfo(	tensorDatas.size(), 
+										{lowerLeg[pos]}, 
+										{upperLeg[pos]},
+										false));
+	tensorDatas.push_back(t);
+
+    disjointed[pos] = true;
+}
+
+void Dmera::Network::UniNetworkAgent::putUnitaries(int pos1, int pos2, uni10::UniTensor t)
+{
+	newUpperLeg1 = newLeg();
+	newUpperLeg2 = newLeg();
+	tensorInfos.puah_back(TensorInfo(   tensorDatas.size(),
+										{upperLeg[pos1], upperLeg[pos2]},
+										{newUpperLeg1, newUpperLeg2},
+										false));
+	upperLeg[pos1] = newUpperLeg1;
+	upperLeg[pos2] = newUpperLeg2;
+	tensorDatas.push_back(t);
+
+	newLowerLeg1 = newLeg();
+	newLowerLeg2 = newLeg();
+	tensorInfos.puah_back(TensorInfo(   tensorDatas.size(), 
+										{newLowerLeg1, newLowerLeg2},
+										{lowerLeg[pos1], lowerLeg[pos2]},
+										true));
+	lowerLeg[pos1] = newLowerLeg1;
+	lowerLeg[pos2] = newLowerLeg2;
+	tensorDatas.push_back(t);
+}
+
+void Dmera::Network::UniNetworkAgent::putSinglets(int pos1, int pos2)
+{
+	tensorInfos.puah_back(TensorInfo(   tensorDatas.size(),
+										{upperLeg[pos1], upperLeg[pos2]},
+										{},
+										false));
+	tensorDatas.push_back(Dmera::Singlet());
+
+	tensorInfos.puah_back(TensorInfo(   tensorDatas.size(), 
+										{},
+										{lowerLeg[pos1], lowerLeg[pos2]},
+										true));
+	tensorDatas.push_back(Dmera::Singlet());
+}
+
+void Dmera::Network::UniNetworkAgent::disjoint(int pos)
+{
+	if (disjointed[pos]) return;
+
+	lowerLeg[pos] = newLeg();
+	legPair.push_back(std::pair<int, int>(upperLeg[pos], lowerLeg[pos]));
+
+	disjointed[pos] = true;
+}
+
+uni10::UniTensor Dmera::Network::UniNetworkAgent::launch()
+{
+	ofstream of;
+
+	of.close();
+
+	uni10::Network network(TEMP_FNAME); 
+
+	for (auto ti : tensorInfos)
+		if (ti.transpose)
+			network.putTensorT(std::string(index), tensorDatas[index]);
+		else
+			network.putTensor(std::string(index), tensorDatas[index]);
+
+	return network.launch();
+}
+
+double Dmera::Network::Entropy(int pos1, int pos2)
+{
+	UniNetworkAgent una(size);
+	resetFlag();
+	causalConeH(pos1);
+	causalConeH(pos2);
+
+	for (auto t : tensors)
+	{
+		if (!t->flaged()) continue;
+
+		if (pos2 > pos1)
+		{
+			if (((t->lPos) > pos1) && ((t->lPos) < pos2)) una.disjoint(t->lPos);
+			if (((t->rPos) > pos1) && ((t->rPos) < pos2)) una.disjoint(t->rPos);
+		} else
+			if (((t->lPos) > pos1) || ((t->lPos) < pos2)) una.disjoint(t->lPos);
+			if (((t->rPos) > pos1) || ((t->rPos) < pos2)) una.disjoint(t->rPos);
+			
+
+		if (t->type == "s")	una.putSinglets (t->lPos, t->rPos);
+		else				una.putUnitaries(t->lPos, t->rPos, t->data); 
+	}
+
+	uni10::Matrix result = una.launch().getBlock(true);
+	double E = 0.;
+
+	for (int i = 0; i < result.row(); ++i)
+	{   
+		double e = result.at(i, i);
+		E += - e * log(e) / log(2);
+	}
+
+	return E;
+}
+
+double Dmera::AverageEntropy(int length)
+{
+	double E = 0.;
+	for (int pos = 0; pos < width; ++pos)
+	{
+		int pos1 = pos;
+		int pos2 = index(pos + length, width);
+		E += FN->Entropy(pos1, pos2);
+	}
+	return E / double(width);
+}
+
 void Dmera::VarUpdate()
 {
 	// Build descending density matrix
@@ -709,6 +910,10 @@ uni10::UniTensor Dmera::svdSolveMinimal(uni10::UniTensor input, double& E)
 
 void Dmera::check() const
 {
+	FN->causalConeH(2);
+	FN->causalConeH(10);
+
+	FN->printNetwork();
 }
 
 void print(const uni10::UniTensor& t) { std::cout << t; }
