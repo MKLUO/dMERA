@@ -31,7 +31,7 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 
 	es.resize(width);
 
-	//iteratively contract nodes
+	//iteratively contract nodes (in SDRG order)
 
 	while (js.size() >= 4)
 	{
@@ -58,6 +58,9 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 
 	// Build Network Forms
 	BuildNetworkForms();
+
+	// Build Full Network
+	BuildFullNetwork();
 
 	of = std::ofstream("_energy");
 }
@@ -183,7 +186,7 @@ uni10::UniTensor Dmera::NetworkForm::launch(Block* b) const
 	// Insert tensors from 'b' into 'network' according to 'symbols'
 	// TODO: Using putTensorT here, thus only allowing RTYPE
 
-	for ( auto name : symbols )
+	for (auto name : symbols)
 	{
 		if		(name == "lt")	network->putTensorT(name,	b->tensor("l"));
 		else if	(name == "rt")	network->putTensorT(name,	b->tensor("r"));
@@ -195,6 +198,119 @@ uni10::UniTensor Dmera::NetworkForm::launch(Block* b) const
 	return network->launch();
 }
 
+void Dmera::BuildFullNetwork()
+{
+	FN = new DmeraNetwork(width);
+
+	for (int i = 0; i < blocks.size(); ++i)
+	{
+		auto b = blocks[i];
+	  	int idx = b->get_idx();
+		FN->putTensor(idx		, i, "u");
+		FN->putTensor(idx - 1	, i, "l");
+		FN->putTensor(idx + 1 	, i, "r");
+		FN->putTensor(idx	 	, i, "s");
+
+		FN->coarse(idx);
+	}		
+
+	FN->putTensor(0, 0, "s");
+}
+
+Dmera::DmeraNetwork::DmeraNetwork(int size)
+{
+	for (int i = 0; i < size; ++i)
+		nodes.push_back(node(i));
+}
+
+Dmera::DmeraNetwork::node::node(int pos_)
+{
+	pos = pos_;
+	T = 0;
+	lr = "";
+}
+
+Dmera::DmeraNetwork::DmeraTensor::DmeraTensor(int lPos_, int rPos_, int i_, std::string type_)
+{
+	lPos = lPos_;
+	rPos = rPos_;
+	i  = i_;
+	type = type_;
+
+	lParent = 0;
+	rParent = 0;
+	lChild = 0;
+	rChild = 0;
+
+	flag = false;
+}
+
+void Dmera::DmeraNetwork::DmeraTensor::setLParent(DmeraTensor* T) { lParent = T; }
+void Dmera::DmeraNetwork::DmeraTensor::setRParent(DmeraTensor* T) { rParent = T; }
+void Dmera::DmeraNetwork::DmeraTensor::setLChild (DmeraTensor* T) { lChild  = T; }
+void Dmera::DmeraNetwork::DmeraTensor::setRChild (DmeraTensor* T) { rChild  = T; }
+
+Dmera::DmeraNetwork::DmeraTensor* Dmera::DmeraNetwork::DmeraTensor::getLParent() { return lParent; }
+Dmera::DmeraNetwork::DmeraTensor* Dmera::DmeraNetwork::DmeraTensor::getRParent() { return rParent; }
+Dmera::DmeraNetwork::DmeraTensor* Dmera::DmeraNetwork::DmeraTensor::getLChild()  { return lChild;  }
+Dmera::DmeraNetwork::DmeraTensor* Dmera::DmeraNetwork::DmeraTensor::getRChild()  { return rChild;  }
+
+void Dmera::DmeraNetwork::putTensor(int idx, int i, std::string type)
+{
+	int idx1 = Dmera::index(idx    , nodes.size());
+	int idx2 = Dmera::index(idx + 1, nodes.size());
+
+	DmeraTensor* NT = new DmeraTensor(nodes[idx1].pos, nodes[idx2].pos, i, type);
+	tensors.push_back(NT);
+
+	if (nodes[idx1].T != 0)
+	{
+		if (nodes[idx1].lr == "l")
+			nodes[idx1].T->setLParent(NT);
+		else
+		    nodes[idx1].T->setRParent(NT);
+	}
+		
+	if (nodes[idx2].T != 0)
+	{
+		if (nodes[idx2].lr == "l")
+			nodes[idx2].T->setLParent(NT);
+		else
+			nodes[idx2].T->setRParent(NT);
+	}
+
+	NT->setLChild(nodes[idx1].T);
+	NT->setRChild(nodes[idx2].T);
+
+	nodes[idx1].T = NT;
+	nodes[idx1].lr = "l";
+	nodes[idx2].T = NT;
+	nodes[idx2].lr = "r";
+}
+
+void Dmera::DmeraNetwork::coarse(int idx)
+{
+	if (idx == nodes.size() - 1)
+	{
+		nodes.pop_back();
+		nodes.erase(nodes.begin());
+
+	} else {
+     	nodes.erase(nodes.begin() + idx); 
+     	nodes.erase(nodes.begin() + idx); 
+	}
+}
+    /*
+double Dmera::TwoPC(int idx1, int idx2)
+{
+	NB.casualCone(idx1);
+	NB.casualCone(idx2);
+	double ev = NB.launch(idx, t);
+	NB.reset();
+
+	return ev;
+}
+      */
 void Dmera::VarUpdate()
 {
 	// Build descending density matrix
@@ -203,11 +319,6 @@ void Dmera::VarUpdate()
 
 	for (int i = blocks.size() - 1; i >= 0; --i)
 	{
-		/*
-		for (auto d : dm)
-			std::cout << d.trace();
-		std::cout << "contracted at: " << blocks[i]->get_idx() << std::endl;
-        */
 
 		Block* b = blocks[i];
 		const int idx = b->get_idx();
@@ -243,8 +354,6 @@ void Dmera::VarUpdate()
 
 	std::vector<uni10::UniTensor> eh = eh_init;
 
-
-	// TODO: test: shift only at beginning
 	for (int i = 0; i < width; ++i)
 		eh[i] = Dmera::eigenshift(eh[i], es[i]);
 		
@@ -260,8 +369,6 @@ void Dmera::VarUpdate()
 		{
 			b->eh[j] = eh[Dmera::index(idx + j - 2, eh.size())];
 
-			// TODO: shift at every layer or not?
-			//b->ehs[j] = Dmera::eigenshift(b->eh[j], b->es[j]);
 			b->ehs[j] = b->eh[j];
 		}
 

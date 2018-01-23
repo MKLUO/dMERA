@@ -49,7 +49,6 @@ class Dmera
 				std::array<uni10::UniTensor, 3> dm; // density matrix
 				std::array<uni10::UniTensor, 5> eh; // effective hamiltonian
 				std::array<uni10::UniTensor, 5> ehs; // effective hamiltonian - shift
-				std::array<double, 5> es;
 			private:
 				const int idx;
 		};
@@ -66,7 +65,55 @@ class Dmera
 				uni10::Network* network;
 		};
 
+		class DmeraNetwork
+		{
+			class DmeraTensor
+			{
+				public:
+					DmeraTensor(int, int, int, std::string);
+					DmeraTensor* getLParent();
+					DmeraTensor* getRParent();
+					DmeraTensor* getLChild();
+					DmeraTensor* getRChild();
+
+					void setLParent(DmeraTensor*);
+					void setRParent(DmeraTensor*);
+					void setLChild(DmeraTensor*);
+					void setRChild(DmeraTensor*);
+
+				private:
+					DmeraTensor* lParent;
+					DmeraTensor* rParent;
+					DmeraTensor* lChild;
+					DmeraTensor* rChild;
+
+                	
+					int lPos, rPos;
+					int i; // i-th block in blocks
+					std::string type;
+
+					bool flag;
+			};
+			typedef struct node
+			{
+				node(int);
+				int pos;
+				DmeraTensor* T;
+				std::string lr;
+			} node;
+
+			public:
+				DmeraNetwork(int);
+				void putTensor(int, int, std::string);
+				void coarse(int);
+
+			private:
+				std::vector<node> nodes;
+				std::vector<DmeraTensor*> tensors;
+		};
+
 		void BuildNetworkForms();
+		void BuildFullNetwork();
 
 		// Utils
 		static double effective_j(double, double, double, double);
@@ -77,10 +124,14 @@ class Dmera
 		static uni10::UniTensor DmSinglet(int);
 		static uni10::UniTensor TwoSiteHam(double, double);
         
+        // Datas
+
 		const int width;
 
 		std::vector<Block*> blocks;
 		std::map<std::string, std::vector<NetworkForm>> network;
+
+		DmeraNetwork* FN; // Full Network
 
 		std::vector<uni10::UniTensor> dm_init;
 		std::vector<uni10::UniTensor> eh_init;
