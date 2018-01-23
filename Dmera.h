@@ -65,30 +65,30 @@ class Dmera
 				uni10::Network* network;
 		};
 
-		class DmeraNetwork
+		class Network
 		{
-			class DmeraTensor
+			class Tensor
 			{
 				public:
-					DmeraTensor(int, int, int, std::string);
-					DmeraTensor* getLParent();
-					DmeraTensor* getRParent();
-					DmeraTensor* getLChild();
-					DmeraTensor* getRChild();
+					Tensor(int, int, int, std::string);
+					Tensor* getLParent();
+					Tensor* getRParent();
+					Tensor* getLChild();
+					Tensor* getRChild();
 
-					void setLParent(DmeraTensor*);
-					void setRParent(DmeraTensor*);
-					void setLChild(DmeraTensor*);
-					void setRChild(DmeraTensor*);
+					void setLParent(Tensor*);
+					void setRParent(Tensor*);
+					void setLChild(Tensor*);
+					void setRChild(Tensor*);
+
+					int lPos, rPos, depth;
 
 				private:
-					DmeraTensor* lParent;
-					DmeraTensor* rParent;
-					DmeraTensor* lChild;
-					DmeraTensor* rChild;
+					Tensor* lParent;
+					Tensor* rParent;
+					Tensor* lChild;
+					Tensor* rChild;
 
-                	
-					int lPos, rPos;
 					int i; // i-th block in blocks
 					std::string type;
 
@@ -98,18 +98,21 @@ class Dmera
 			{
 				node(int);
 				int pos;
-				DmeraTensor* T;
+				Tensor* T;
 				std::string lr;
 			} node;
 
 			public:
-				DmeraNetwork(int);
+				Network(int);
 				void putTensor(int, int, std::string);
 				void coarse(int);
 
+				void printNetwork(bool);
+
 			private:
+				int size, maxDepth;
 				std::vector<node> nodes;
-				std::vector<DmeraTensor*> tensors;
+				std::vector<Tensor*> tensors;
 		};
 
 		void BuildNetworkForms();
@@ -131,7 +134,7 @@ class Dmera
 		std::vector<Block*> blocks;
 		std::map<std::string, std::vector<NetworkForm>> network;
 
-		DmeraNetwork* FN; // Full Network
+		Network* FN; // Full Network
 
 		std::vector<uni10::UniTensor> dm_init;
 		std::vector<uni10::UniTensor> eh_init;

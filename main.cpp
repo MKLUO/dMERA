@@ -7,7 +7,7 @@
 
 #include "Dmera.h"
 
-const int SITES = 50;
+const int SITES = 10;
 
 const double DELTA = 0.0;
 const double DISORDER = 5.0;
@@ -28,12 +28,12 @@ int main()
 
 	Dmera case1(j, DELTA);
 
-
+/*
 	for (int i = 0; i < EPOCH; ++i)
 	{
 		std::cout << "EPOCH\t" << i + 1 << std::endl;
 		case1.VarUpdate();
 	}
-
+*/
 	return 0;
 }

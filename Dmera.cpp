@@ -33,12 +33,16 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 
 	//iteratively contract nodes (in SDRG order)
 
+	std::cout << "SDRG order:";
+
 	while (js.size() >= 4)
 	{
 		int idx = 0;
 		for (int i = 0; i < js.size(); ++i)
 			if (js[i] > js[idx])
 				idx = i;
+
+		std::cout << " " << idx;
 
 		blocks.push_back(new Block(idx));
 
@@ -55,6 +59,8 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 		else
 			js.erase(js.begin() + idx, js.begin() + idx + 2);
 	}
+
+	std::cout << std::endl;
 
 	// Build Network Forms
 	BuildNetworkForms();
@@ -200,7 +206,7 @@ uni10::UniTensor Dmera::NetworkForm::launch(Block* b) const
 
 void Dmera::BuildFullNetwork()
 {
-	FN = new DmeraNetwork(width);
+	FN = new Network(width);
 
 	for (int i = 0; i < blocks.size(); ++i)
 	{
@@ -215,22 +221,26 @@ void Dmera::BuildFullNetwork()
 	}		
 
 	FN->putTensor(0, 0, "s");
+
+	FN->printNetwork(true);
 }
 
-Dmera::DmeraNetwork::DmeraNetwork(int size)
+Dmera::Network::Network(int size_)
 {
-	for (int i = 0; i < size; ++i)
+	size = size_;	
+	maxDepth = 0;
+	for (int i = 0; i < size_; ++i)
 		nodes.push_back(node(i));
 }
 
-Dmera::DmeraNetwork::node::node(int pos_)
+Dmera::Network::node::node(int pos_)
 {
 	pos = pos_;
 	T = 0;
 	lr = "";
 }
 
-Dmera::DmeraNetwork::DmeraTensor::DmeraTensor(int lPos_, int rPos_, int i_, std::string type_)
+Dmera::Network::Tensor::Tensor(int lPos_, int rPos_, int i_, std::string type_)
 {
 	lPos = lPos_;
 	rPos = rPos_;
@@ -245,22 +255,22 @@ Dmera::DmeraNetwork::DmeraTensor::DmeraTensor(int lPos_, int rPos_, int i_, std:
 	flag = false;
 }
 
-void Dmera::DmeraNetwork::DmeraTensor::setLParent(DmeraTensor* T) { lParent = T; }
-void Dmera::DmeraNetwork::DmeraTensor::setRParent(DmeraTensor* T) { rParent = T; }
-void Dmera::DmeraNetwork::DmeraTensor::setLChild (DmeraTensor* T) { lChild  = T; }
-void Dmera::DmeraNetwork::DmeraTensor::setRChild (DmeraTensor* T) { rChild  = T; }
+void Dmera::Network::Tensor::setLParent(Tensor* T) { lParent = T; }
+void Dmera::Network::Tensor::setRParent(Tensor* T) { rParent = T; }
+void Dmera::Network::Tensor::setLChild (Tensor* T) { lChild  = T; }
+void Dmera::Network::Tensor::setRChild (Tensor* T) { rChild  = T; }
 
-Dmera::DmeraNetwork::DmeraTensor* Dmera::DmeraNetwork::DmeraTensor::getLParent() { return lParent; }
-Dmera::DmeraNetwork::DmeraTensor* Dmera::DmeraNetwork::DmeraTensor::getRParent() { return rParent; }
-Dmera::DmeraNetwork::DmeraTensor* Dmera::DmeraNetwork::DmeraTensor::getLChild()  { return lChild;  }
-Dmera::DmeraNetwork::DmeraTensor* Dmera::DmeraNetwork::DmeraTensor::getRChild()  { return rChild;  }
+Dmera::Network::Tensor* Dmera::Network::Tensor::getLParent() { return lParent; }
+Dmera::Network::Tensor* Dmera::Network::Tensor::getRParent() { return rParent; }
+Dmera::Network::Tensor* Dmera::Network::Tensor::getLChild()  { return lChild;  }
+Dmera::Network::Tensor* Dmera::Network::Tensor::getRChild()  { return rChild;  }
 
-void Dmera::DmeraNetwork::putTensor(int idx, int i, std::string type)
+void Dmera::Network::putTensor(int idx, int i, std::string type)
 {
 	int idx1 = Dmera::index(idx    , nodes.size());
 	int idx2 = Dmera::index(idx + 1, nodes.size());
 
-	DmeraTensor* NT = new DmeraTensor(nodes[idx1].pos, nodes[idx2].pos, i, type);
+	Tensor* NT = new Tensor(nodes[idx1].pos, nodes[idx2].pos, i, type);
 	tensors.push_back(NT);
 
 	if (nodes[idx1].T != 0)
@@ -282,13 +292,25 @@ void Dmera::DmeraNetwork::putTensor(int idx, int i, std::string type)
 	NT->setLChild(nodes[idx1].T);
 	NT->setRChild(nodes[idx2].T);
 
+	int d1, d2;
+
+	if (nodes[idx1].T == 0) d1 = 0;
+	else d1 = nodes[idx1].T->depth;
+
+	if (nodes[idx2].T == 0) d2 = 0;
+	else d2 = nodes[idx2].T->depth;
+
+	NT->depth = (d1 > d2)? (d1 + 1): (d2 + 1);
+
+	if (NT->depth > maxDepth) maxDepth = NT->depth;
+
 	nodes[idx1].T = NT;
 	nodes[idx1].lr = "l";
 	nodes[idx2].T = NT;
 	nodes[idx2].lr = "r";
 }
 
-void Dmera::DmeraNetwork::coarse(int idx)
+void Dmera::Network::coarse(int idx)
 {
 	if (idx == nodes.size() - 1)
 	{
@@ -300,6 +322,46 @@ void Dmera::DmeraNetwork::coarse(int idx)
      	nodes.erase(nodes.begin() + idx); 
 	}
 }
+
+void Dmera::Network::printNetwork(bool flagOnly)
+{
+	std::string graph[size][maxDepth];
+    for (int i = 0; i < size; ++i)
+    	for (int j = 0; j < maxDepth; ++j)
+			graph[i][j] = "   ";
+		
+    for (int i = 0; i < size; ++i)
+		std::cout << " " << i << " ";
+	std::cout << std::endl;
+
+	for (auto t : tensors)
+	{
+		int l = t->lPos;	
+		int r = t->rPos;
+		int d = t->depth - 1;
+
+		if (l > r)
+		{
+			for (int i = 0; i < r; ++i)	    	graph[i][d] = "───";
+			for (int i = l + 1; i < size; ++i)	graph[i][d] = "───";
+
+		} else {
+         	for (int i = l + 1; i < r; ++i)		graph[i][d] = "───"; 
+		}
+
+		graph[l][d] = " └─";
+		graph[r][d] = "─┘ ";
+	}
+
+    for (int j = 0; j < maxDepth; ++j)
+	{
+    	for (int i = 0; i < size; ++i)
+			std::cout << graph[i][j];
+
+		std::cout << std::endl;
+	}
+}
+
     /*
 double Dmera::TwoPC(int idx1, int idx2)
 {
