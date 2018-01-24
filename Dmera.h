@@ -21,7 +21,7 @@ const std::string TEMP_FNAME("NetworkSheets/_TEMP");
 const bool FROM_FILE = true;
 
 const int VAR_TIME = 3;
-const int EPOCH = 50;
+const int EPOCH = 100;
 
 class Dmera
 {
