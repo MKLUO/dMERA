@@ -35,7 +35,7 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 
 	//iteratively contract nodes (in SDRG order)
 
-	std::cout << "SDRG order:";
+	//std::cout << "SDRG order:";
 
 	while (js.size() >= 4)
 	{
@@ -44,7 +44,7 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 			if (js[i] > js[idx])
 				idx = i;
 
-		std::cout << " " << idx;
+		//std::cout << " " << idx;
 
 		blocks.push_back(new Block(idx));
 
@@ -62,7 +62,7 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 			js.erase(js.begin() + idx, js.begin() + idx + 2);
 	}
 
-	std::cout << std::endl;
+	//std::cout << std::endl;
 
 	// Build Network Forms
 	BuildNetworkForms();
@@ -553,11 +553,11 @@ double Dmera::Network::Entropy(int pos1, int pos2)
 
 		if (pos2 > pos1)
 		{
-			if (((t->lPos) > pos1) && ((t->lPos) < pos2)) una.disjoint(t->lPos);
-			if (((t->rPos) > pos1) && ((t->rPos) < pos2)) una.disjoint(t->rPos);
+			if (((t->lPos) > pos1) && ((t->lPos) <= pos2)) una.disjoint(t->lPos);
+			if (((t->rPos) > pos1) && ((t->rPos) <= pos2)) una.disjoint(t->rPos);
 		} else {
-			if (((t->lPos) > pos1) || ((t->lPos) < pos2)) una.disjoint(t->lPos);
-			if (((t->rPos) > pos1) || ((t->rPos) < pos2)) una.disjoint(t->rPos);
+			if (((t->lPos) > pos1) || ((t->lPos) <= pos2)) una.disjoint(t->lPos);
+			if (((t->rPos) > pos1) || ((t->rPos) <= pos2)) una.disjoint(t->rPos);
 		}
 			
 
@@ -566,16 +566,18 @@ double Dmera::Network::Entropy(int pos1, int pos2)
 	}
 
 	uni10::Matrix result = una.launch().getRawElem();
+	uni10::Matrix result_diag = result.eigh().at(0);
 
 	double E = 0.;
 
-	int rows = result.row();
+	int rows = result_diag.row();
 //    std::cout << result;     
 
 	for (int i = 0; i < rows; ++i)
 	{   
-		uni10::Real e = result.at(uni10::CTYPE, i * rows + i).real();
-		if (e != 0.) E += - e * std::log(e) / log(2);
+		//uni10::Real e = result_diag.at(uni10::CTYPE, i * rows + i).real();
+		uni10::Real e = result_diag.at(i, i);
+		if (e > 1.e-9) E += - e * std::log(e) / log(2);
 	}
 
 //	std::cout << result;										 
@@ -591,7 +593,16 @@ double Dmera::AverageEntropy(int length) const
 		int pos2 = index(pos + length, width);
 		E += FN->Entropy(pos1, pos2);
 	}
-	return 0.5 * E / double(width);
+	return E / double(width);
+}
+
+void Dmera::VarUpdateForEpochs()
+{
+	for (int i = 0; i < EPOCH; ++i)
+	{
+		//std::cout << "EPOCH\t" << i + 1 << " : ";
+		VarUpdate();
+	}
 }
 
 void Dmera::VarUpdate()
@@ -749,7 +760,7 @@ void Dmera::VarUpdate()
 		E += ess;
 
 	of << E << std::endl;
-	std::cout << E << std::endl;
+	//std::cout << E << std::endl;
 }
 
 double Dmera::effective_j(double j, double j_l, double j_r, double delta) { return j_l * j_r / j / (1. + delta); }

@@ -20,7 +20,8 @@ const std::string TEMP_FNAME("NetworkSheets/_TEMP");
 
 const bool FROM_FILE = true;
 
-const int VAR_TIME = 5;
+const int VAR_TIME = 3;
+const int EPOCH = 50;
 
 class Dmera
 {
@@ -30,6 +31,7 @@ class Dmera
 //		std::string summary(bool) const;
 
 		void VarUpdate();
+		void VarUpdateForEpochs();
 
 		double AverageEntropy(int) const;
 
