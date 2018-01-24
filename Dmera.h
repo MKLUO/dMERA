@@ -27,6 +27,7 @@ class Dmera
 {
 	public:
 		Dmera(std::vector<double>, double);
+		~Dmera();
 
 //		std::string summary(bool) const;
 

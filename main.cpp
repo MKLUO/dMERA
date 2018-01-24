@@ -8,27 +8,28 @@
 #include "Dmera.h"
 
 const int SITES = 20;
+const int BSIZE = 9;
 
-const int SAMPLES = 30;
+const int SAMPLES = 10;
 
 //const double DELTA = 0.0;		//Delta-z
-const double DISORDER = 1.0;	//Delta-J
+const double DISORDER = 4.0;	//Delta-J
 
 std::vector<double> xx_case_entropy(double, int);
 
 int main()
 {
-	std::vector<double> totalEntropys(SITES/2, 0.);
+	std::vector<double> totalEntropys(BSIZE, 0.);
 
     for (int i = 0; i < SAMPLES; ++i)
 	{
 		std::cout << "Sample " << i + 1 << ", " << std::flush;
 		std::vector<double> result(xx_case_entropy(DISORDER, SITES));
 
-		for (int j = 0; j < SITES/2; ++j)
+		for (int j = 0; j < BSIZE; ++j)
 			totalEntropys[j] += result[j];
 	}
-	for (int j = 0; j < SITES/2; ++j)
+	for (int j = 0; j < BSIZE; ++j)
 		totalEntropys[j] /= SAMPLES;
 
 	std::ofstream of;
@@ -36,7 +37,7 @@ int main()
 
 	std::cout	<< "Entropy of disorder = " << DISORDER << ", " << SITES << " sites, "  << SAMPLES << " samples:\t" << std::endl;
 	of 			<< "Entropy of disorder = " << DISORDER << ", " << SITES << " sites, "  << SAMPLES << " samples:\t" << std::endl;
-	for (int j = 0; j < SITES/2; ++j)
+	for (int j = 0; j < BSIZE; ++j)
 	{
 		std::cout	<< "block size " << j + 1 << ":\t" << totalEntropys[j] << std::endl;
 		of			<< "block size " << j + 1 << ":\t" << totalEntropys[j] << std::endl;
@@ -63,7 +64,7 @@ std::vector<double> xx_case_entropy(double disorder, int sites)
 	case1.VarUpdateForEpochs();
 
 	std::vector<double> entropys;
-	for (int i = 1; i < sites/2 + 1; ++i)
+	for (int i = 1; i <= BSIZE; ++i)
 	{
 		std::cout << "|" << std::flush;
 		entropys.push_back(case1.AverageEntropy(i));

@@ -73,6 +73,12 @@ Dmera::Dmera(std::vector<double> js, double delta): width(js.size())
 	of = std::ofstream("_energy");
 }
 
+Dmera::~Dmera()
+{
+	for (auto b : blocks) delete b;
+	delete FN;
+}
+
 Dmera::Block::Block(int idx_): idx(idx_)
 {
 	t["l"] = Dmera::Random_Unitary();
