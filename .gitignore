@@ -6,6 +6,9 @@
 *.log
 *.gp
 _energy
+entropy_xx
+gprof*
+uni10
 NetworkSheets/_OLD*
 NetworkSheets/_TEMP
 result/*

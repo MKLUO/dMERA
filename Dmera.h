@@ -35,6 +35,7 @@ class Dmera
 		void VarUpdateForEpochs();
 
 		double AverageEntropy(int) const;
+		double AverageEntropyExact(int) const;
 
 		void check() const;
 
@@ -176,9 +177,14 @@ class Dmera
 		static uni10::UniTensor DmSinglet(int);
 		static uni10::UniTensor TwoSiteHam(double, double);
         
+        static const std::vector<uni10::Bond> B_22; // Bonds for 2 + 2 UniTensors
+        static const std::vector<uni10::Bond> B_20; // Bonds for 2 + 0 UniTensors
+
         // Datas
 
 		const int width;
+
+		std::vector<double> _js;
 
 		std::vector<Block*> blocks;
 		std::map<std::string, std::vector<NetworkForm>> network;
